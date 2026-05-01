@@ -49,15 +49,354 @@ Anatomy → Run → Test → Runs (Replay) → Trace → Evals → Tools → Pro
 
 Each sub-tab in the Agents panel addresses one part of the lifecycle.
 
-## Coming on this page
+## The four harness scaffolds — what each one writes
 
-- Step-by-step screenshot walkthrough of the four harness scaffolds
-- Adding your first tool via the Visual Tool Builder
-- Setting up evals for regression testing
-- Connecting Agent21 and publishing
+Click **+ Build new** in the Publish sub-tab (or the **Build your first agent** CTA on the Anatomy card). The wizard picks a kit and writes a runnable starter into your project. Here's what each kit produces.
 
-In the meantime, the [Get Started guide](/get-started) covers the linear flow.
+### Claude Agent SDK (TypeScript) — the default
 
-> **Stuck?** The agent itself can help. Open the bottom Claude Code terminal and ask Claude to add a new tool. The AI will edit the file, you run, you replay.
+The fastest first-run. Calls the Anthropic API directly via the streaming `query()` API. No Claude Code CLI required.
 
-[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/tutorials/first-agent.mdx)
+`agent.ts`:
+
+```ts
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { record } from "./recorder";
+
+const SLUG = "hello-agent";
+
+async function main() {
+  const prompt = process.argv[2] || "List the files in this directory and tell me what kind of project this is.";
+  const stream = query({
+    prompt,
+    options: { allowedTools: ["Bash", "Glob", "Read"] },
+  });
+  for await (const message of record(stream, { slug: SLUG, input: prompt, kit: "claude-agent-sdk-ts" })) {
+    if ("result" in message) console.log(message.result);
+  }
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });
+```
+
+Env: `ANTHROPIC_API_KEY=sk-ant-...` in `.env.local`. Run: `npm install && npm run agent:dev`.
+
+### Claude Agent SDK (Python)
+
+Same shape, async-first. Drops `agent.py` and `recorder.py`:
+
+```python
+import asyncio, sys
+from claude_agent_sdk import query, ClaudeAgentOptions
+from recorder import record
+
+SLUG = "hello-agent"
+
+async def main():
+    prompt = sys.argv[1] if len(sys.argv) > 1 else "List the files..."
+    stream = query(
+        prompt=prompt,
+        options=ClaudeAgentOptions(allowed_tools=["Bash", "Glob", "Read"]),
+    )
+    async for message in record(stream, slug=SLUG, input=prompt, kit="claude-agent-sdk-python"):
+        if hasattr(message, "result"):
+            print(message.result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Env: `ANTHROPIC_API_KEY=sk-ant-...`. Run: `pip install -r requirements.txt && python agent.py`.
+
+### Cursor SDK (TypeScript) — Composer 2 + multi-model
+
+Cursor's harness. Defaults to **Composer 2** but the model id is one constant to swap (`"claude-opus-4-7"`, `"gpt-5"`, `"composer-2"`). Sandboxed cloud VMs supported.
+
+```ts
+import { Agent } from "@cursor/sdk";
+import { record } from "./recorder";
+
+const SLUG = "hello-agent";
+const MODEL_ID = "composer-2";
+
+async function main() {
+  const prompt = process.argv[2] || "Summarize what this repository does.";
+  const agent = await Agent.create({
+    apiKey: process.env.CURSOR_API_KEY,
+    model: { id: MODEL_ID },
+    local: { cwd: process.cwd() },
+  });
+  const run = await agent.send(prompt);
+  for await (const event of record(run.stream(), { slug: SLUG, input: prompt, kit: "cursor-sdk-ts", model: MODEL_ID })) {
+    if (event && typeof event === "object" && typeof (event as any).text === "string") {
+      process.stdout.write((event as any).text);
+    }
+  }
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });
+```
+
+Env: `CURSOR_API_KEY=...` from https://cursor.com/dashboard.
+
+### Microsoft Agent Framework (Python) — Azure-native
+
+The default for Microsoft enterprise stacks. Azure OpenAI as the model provider via env vars; Foundry + AzureCliCredential offered as a commented alternative.
+
+```python
+import asyncio, os, sys
+from agent_framework import Agent
+from agent_framework.openai import AzureOpenAIChatClient
+from recorder import record
+
+SLUG = "hello-agent"
+
+async def main():
+    prompt = sys.argv[1] if len(sys.argv) > 1 else "Summarize the files in this directory."
+    agent = Agent(
+        client=AzureOpenAIChatClient(
+            endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+            deployment_name=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+        ),
+        name="Hello Agent",
+        instructions="You are a concise assistant. Cite file paths when discussing code.",
+    )
+    async for update in record(
+        agent.run_stream(prompt),
+        slug=SLUG, input=prompt, kit="microsoft-agent-framework-py",
+        model=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
+    ):
+        text = getattr(update, "text", None) or getattr(update, "content", None)
+        if isinstance(text, str):
+            sys.stdout.write(text)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Env: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`.
+
+### Google ADK (Python) — Vertex AI native
+
+Defaults to AI Studio (`GOOGLE_API_KEY`) for fastest local start; one env-var flip moves to Vertex AI for production (`GOOGLE_GENAI_USE_VERTEXAI=TRUE`).
+
+```python
+import asyncio, sys
+from google.adk.agents import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai.types import Content, Part
+from recorder import record
+
+SLUG = "hello-agent"
+MODEL = "gemini-2.0-flash"
+
+root_agent = Agent(
+    name="hello_agent",
+    model=MODEL,
+    instruction="You are a concise assistant. Cite file paths when discussing code.",
+)
+
+async def main():
+    prompt = sys.argv[1] if len(sys.argv) > 1 else "Summarize what this repository does."
+    runner = InMemoryRunner(agent=root_agent, app_name=SLUG)
+    session = await runner.session_service.create_session(app_name=SLUG, user_id="codenow-local")
+    new_message = Content(role="user", parts=[Part(text=prompt)])
+
+    async for event in record(
+        runner.run_async(user_id="codenow-local", session_id=session.id, new_message=new_message),
+        slug=SLUG, input=prompt, kit="google-adk-py", model=MODEL,
+    ):
+        content = getattr(event, "content", None)
+        if content and getattr(content, "parts", None):
+            for part in content.parts:
+                if getattr(part, "text", None):
+                    sys.stdout.write(part.text)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Env: `GOOGLE_API_KEY=...` from https://aistudio.google.com/apikey.
+
+## Add your first tool with the Visual Tool Builder
+
+Tools are functions your agent can call mid-conversation: `bash(cmd)`, `drive.search(query)`, `calendar.create_event(slot, attendees)`. CodeNow ships a Visual Tool Builder so you don't have to remember the SDK boilerplate.
+
+### Open the builder
+
+Agents panel → **Tools** sub-tab → **+ New Tool**. A modal opens with three fields:
+
+1. **Name** — `snake_case`. Becomes the function symbol the agent sees (e.g. `fetch_weather`).
+2. **Description** — what the tool does, in plain English. The model uses this to decide when to call it.
+3. **Parameters** — name + type + description for each. Click **+ Add param** to add more. Types: `string`, `number`, `boolean`.
+
+### What the builder generates
+
+For a `fetch_weather` tool with one `string` param `city`, the generator drops `tools/fetch_weather.ts` (or `.py` if your project is Python):
+
+```ts
+import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
+
+export const fetchWeather = tool({
+  name: "fetch_weather",
+  description: "Fetch the current weather for a city.",
+  inputSchema: z.object({
+    city: z.string().describe("Name of the city, e.g. 'San Francisco'"),
+  }),
+  async execute({ city }) {
+    // TODO: replace with a real call to your weather provider.
+    return { temperature_c: 18, conditions: "partly cloudy", city };
+  },
+});
+
+export const fetchWeatherServer = createSdkMcpServer({
+  name: "fetch_weather_server",
+  tools: [fetchWeather],
+});
+```
+
+Open `agent.ts`, import the server, pass it to `query`:
+
+```ts
+import { fetchWeatherServer } from "./tools/fetch_weather";
+
+const stream = query({
+  prompt,
+  options: {
+    allowedTools: ["Bash", "Read", "fetch_weather"],
+    mcpServers: [fetchWeatherServer],
+  },
+});
+```
+
+### Add the tool to the agent's manifest
+
+Drag the row from the Tools tab onto the **Anatomy** card. The card highlights with a "Drop to add to this agent" pill. Release. Toast confirms; `manifest.tools` is updated and saved via `studioWriteAgent` — no JSON editing.
+
+### Test the tool in isolation
+
+Tools tab → click **Test** on any tool row. A modal asks for JSON args. Submit; the tool runs in your project's runtime and returns the result + `stderr` if any. No need to spin up the full agent loop.
+
+## Setting up evals for regression testing
+
+Evals are JSON test suites that run your agent against known inputs and assert on the output. CodeNow runs them in parallel against every model you've selected, with a pass/fail diff vs the last run.
+
+### Eval file format
+
+`.codenow/agent-studio/evals/release-notes-smoke.json`:
+
+```json
+{
+  "name": "release-notes-smoke",
+  "description": "Smoke test for the release notes generator.",
+  "cases": [
+    {
+      "input": "Summarize PR #1234: 'feat: add /health endpoint'",
+      "expected_contains": "health endpoint"
+    },
+    {
+      "input": "Generate notes for these merged PRs: #100, #101",
+      "expected_min_length": 80,
+      "forbidden_phrases": ["I cannot", "as an AI"]
+    },
+    {
+      "input": "What's in v0.1.4?",
+      "expected_regex": "(v?0\\.1\\.4|version 0\\.1\\.4)"
+    }
+  ]
+}
+```
+
+### The six assertion types
+
+| Assertion | What it checks |
+|---|---|
+| `expected_contains` | Output includes the given substring |
+| `expected_regex` | Output matches the regex (full PCRE) |
+| `expected_equals` | Output exactly equals the given string |
+| `expected_min_length` | Output is at least N characters |
+| `expected_max_length` | Output is at most N characters |
+| `forbidden_phrases` | Output does NOT include any of these strings |
+
+Each case can combine multiple assertions — they're AND'd.
+
+### Run evals
+
+Open **Evals** sub-tab → **Run all**. CodeNow fans out every case across every selected model in parallel. Each cell shows pass/fail/skipped. Click a cell to see the actual output and which assertion failed.
+
+### Pass/fail diff vs last run
+
+Every Run-All saves to `.codenow/agent-studio/eval-runs/{ts}.json`. The next Run-All compares to the most recent. The diff column shows:
+
+- 🟢 **green** if a previously failing case now passes
+- 🔴 **red** if a previously passing case now fails (regression)
+- ⚪ **gray** if status is unchanged
+
+Catch regressions before the customer does.
+
+### Snapshot a successful run as an eval
+
+Open the **Runs** tab → click any successful run → **Snapshot as eval** (top right of the Replay viewer). CodeNow extracts the input + output and appends it as a new case to the eval suite of your choice. One click, no JSON editing.
+
+This is how you grow the eval suite organically: every time the agent does something well, you lock it in as a regression test.
+
+## Connecting Agent21 and publishing
+
+Once the agent works locally and passes evals, ship it to the [Agent21 marketplace](https://agent21.ai). Other teams (or your own) can subscribe, fork, or invoke it as a hosted agent.
+
+### Connect Agent21 (one-time)
+
+Agents panel → **Publish** sub-tab → **Connect Agent21**. Browser opens to OAuth. Authorize CodeNow. Token stored in `~/.codenow/.env.local` (never committed). The Publish tab now shows a green "Connected as your-team" badge.
+
+### The pre-flight checklist
+
+Before the manifest can ship, CodeNow runs a 6-point validation:
+
+| Check | What it validates |
+|---|---|
+| **OAuth** | Agent21 token is fresh and the team is verified |
+| **Bundle** | All referenced prompts/evals/tools exist on disk |
+| **Name + slug** | Slug is URL-safe, name is non-empty |
+| **Description** | At least one paragraph |
+| **Content URL or invocation URL** | Hosted endpoint or self-host pointer |
+| **Evals (soft warn)** | Smoke eval exists; warns but doesn't block if missing |
+
+Any failure shows inline with a one-click "Fix" button — most issues resolve in seconds (e.g. add a missing description in the manifest editor right there).
+
+### One-click publish
+
+Pre-flight green → click **Publish to Agent21**. CodeNow:
+
+1. Bundles the manifest (slug, name, description, prompts, evals, tool sigs, guardrails, model preference)
+2. POSTs to `https://agent21.ai/api/v1/agents` with your OAuth token
+3. Returns the public listing URL: `https://agent21.ai/agents/your-slug`
+
+The agent now appears in the Agent21 marketplace with full provenance: built-by, runs-at, data-access scopes, price.
+
+### What ships in the bundle
+
+| Field | Source |
+|---|---|
+| Identity | `manifest.{slug, name, description, function}` |
+| Prompts | Files in `.codenow/agent-studio/prompts/` referenced by `manifest.prompts` |
+| Evals | Files in `.codenow/agent-studio/evals/` referenced by `manifest.evals` |
+| Tool signatures | `manifest.tools` (just names — implementations stay yours) |
+| Guardrails | `manifest.guardrails` policy (data access, allowed actions, tone) |
+| Provenance | `manifest.{builtBy, runsAt, dataAccess, price, version}` |
+
+Tool *implementations* stay in your repo (you own the code). Only the signatures travel — that way someone forking your agent has to re-implement the tools themselves under their own auth.
+
+### After publish
+
+The **Publish** tab shows a row per published agent with:
+
+- Public URL (click to view marketplace listing)
+- Subscribe count + run count (live from Agent21)
+- **Update** button — push a new version (bumps `manifest.version`, prompts re-bundled)
+- **Unpublish** button — removes from marketplace (existing subscribers get notified)
+
+> **Stuck?** Open the Claude Code terminal in CodeNow and ask: *"Why is the pre-flight failing on the bundle check?"* — Claude will read your manifest + skills.json and tell you exactly which referenced file is missing.
+
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/app/tutorials/first-agent/page.mdx)
