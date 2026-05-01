@@ -1,0 +1,70 @@
+---
+title: File layout
+---
+
+# File layout
+
+What CodeNow writes where. Understanding the file layout helps debug, manually inspect, or build tooling around CodeNow.
+
+## Per-project files
+
+Inside each project you open in CodeNow:
+
+```
+your-project/
+├── .codenow/
+│   ├── agent-studio/
+│   │   ├── agents/{slug}.json    ← agent manifests
+│   │   ├── prompts/*.md          ← versioned system prompts
+│   │   └── evals/*.json          ← eval suites
+│   ├── runs/                     ← recorded agent runs (JSONL)
+│   │   └── {slug}/
+│   │       └── {ts}-{runId}.jsonl
+│   └── skills.json               ← reusable skill definitions
+├── .codenow.local.json           ← per-project local-only settings (gitignored)
+└── (your project files...)
+```
+
+The `.codenow/runs/` directory is gitignored by default in CodeNow-scaffolded agents — runs stay local unless you configure remote shipping.
+
+## Per-user files (home directory)
+
+```
+~/.codenow/
+├── projects.json        ← list of projects you've added (paths, names, colors)
+├── auth.json            ← Supabase session
+├── models.json          ← active AI model + API keys
+├── connections.json     ← custom MCP servers
+├── extensions.json      ← installed extensions
+├── exec-agents.json     ← Business-mode agent registry
+└── exec-agent-runs.json ← Business-mode run history (capped 100/agent, 500 total)
+```
+
+These are user-scoped and never committed to any project repo.
+
+## Application files (inside CodeNow.app)
+
+For curious folks who want to inspect the IDE itself:
+
+```
+/Applications/CodeNow.app/Contents/Resources/app/
+├── src/
+│   ├── main.js             ← Electron main process
+│   ├── preload.js          ← context bridge (sandbox: false required)
+│   ├── runs.js             ← replay storage layer
+│   ├── agent-kits.js       ← scaffolders + recorder source
+│   ├── studio.js           ← Agent Studio backend
+│   └── renderer/
+│       ├── index.html
+│       ├── app.js
+│       └── styles.css
+├── assets/
+│   ├── icon.icns
+│   └── icon.png
+└── node_modules/
+    └── monaco-editor/min/  ← only the min/ build is shipped
+```
+
+The `.app` is signed by *Developer ID Application: PREDIXTIONS INC*, notarized by Apple, and stapled.
+
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/reference/file-layout.mdx)

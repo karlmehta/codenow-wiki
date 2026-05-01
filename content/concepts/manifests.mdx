@@ -1,0 +1,62 @@
+---
+title: Manifests and provenance
+---
+
+# Manifests and provenance
+
+Every agent in CodeNow has a **manifest** — a single JSON file that describes who built it, what it can reach, what it knows, and where it runs. Lives at `.codenow/agent-studio/agents/{slug}.json` in your project.
+
+## Anatomy of a manifest
+
+```json
+{
+  "slug": "release-notes-generator",
+  "name": "Release Notes Generator",
+  "description": "Generates concise release notes from merged PRs.",
+  "function": "engineering",
+  "version": "0.1.0",
+  "builtBy": "your-team",
+  "runsAt": "Self-hosted (Anthropic API)",
+  "preferredModel": "claude-opus-4-7",
+  "kit": "claude-agent-sdk-ts",
+  "prompts": ["release-notes-system"],
+  "evals": ["release-notes-smoke"],
+  "tools": ["github_list_prs", "github_diff"],
+  "primarySkills": ["q3-review-format"],
+  "dataAccess": ["github:read"],
+  "price": "free",
+  "lifecycle": "draft",
+  "origin": "built"
+}
+```
+
+Each field has a load-bearing purpose for a downstream consumer (the IDE, the marketplace, a compliance review).
+
+## Why provenance matters
+
+When an agent gets published to Agent21 and forked by another team, the manifest carries the provenance forward. The fork's manifest gets `forkedFrom: "<original-slug>"` so anyone using the fork can trace it back. Compliance teams can audit: who built it originally, what data it accessed, what guardrails were attached.
+
+CodeNow's manifest preserves the chain — you can't strip provenance just by editing the manifest, because Agent21's marketplace verifies the original publisher's signature.
+
+## What lives in the manifest vs. elsewhere
+
+| Lives in the manifest | Lives elsewhere |
+|---|---|
+| Identity (slug, name, description, function) | Source code (`agent.ts` / `agent.py`) |
+| Version, lifecycle, origin | API keys (`.env.local`, never committed) |
+| Tool names + signatures | Tool implementations (`tools/*.ts`) |
+| Prompt names + eval names | Prompt content (`.codenow/agent-studio/prompts/`) |
+| Connector IDs | Connector OAuth tokens (`~/.codenow/connections.json`) |
+| `runsAt`, `dataAccess`, `price` | Per-invocation runtime data (`.codenow/runs/`) |
+
+## How forking works
+
+Open **Publish → Browse marketplace** in the Agents panel, find an agent, hit **Fork**. CodeNow:
+
+1. Pulls the source agent's manifest from Agent21
+2. Clones the prompts and evals into your project
+3. Lists the tool names with `// re-implement these` markers (since tool *implementations* don't transfer — you own the code)
+4. Stamps the new manifest with `forkedFrom: "<source-slug>"`
+5. Resets `lifecycle: "draft"` and `origin: "forked"` so you can train, guardrail, and re-publish under your team's name
+
+The original publisher's identity stays in `forkedFrom` for audit purposes; your manifest declares your team as `builtBy`.

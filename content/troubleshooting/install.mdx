@@ -1,0 +1,63 @@
+---
+title: Install issues
+---
+
+# Install issues
+
+Common problems on first install and how to fix them.
+
+import { Callout } from 'nextra/components';
+
+## "Unidentified developer" warning on macOS first launch
+
+CodeNow is signed and notarized — you should NOT see this. If you do:
+
+1. The DMG might be from a pre-v0.1.4 build. Re-download from [codenow.pro/api/download?os=mac](https://codenow.pro/api/download?os=mac).
+2. Right-click → **Open** → **Open** to bypass once.
+3. Verify signature: `codesign -dv --verbose=2 /Applications/CodeNow.app` — should show `Authority=Developer ID Application: PREDIXTIONS INC (K9X3X4GQAQ)`.
+
+## App launches but nothing renders / "INIT ERROR"
+
+Almost always: the renderer can't find its preload bridge. Causes:
+
+- The app was launched from a packaged build that has a Monaco path issue. Currently CodeNow ships with `asar: false` to avoid this — re-download the latest DMG.
+- Your macOS version is too old. CodeNow requires macOS 10.12+ (APFS).
+
+## Terminal doesn't accept input
+
+The bottom terminal panel is xterm.js + node-pty. If keystrokes don't reach the shell:
+
+1. Click into the terminal area to focus it.
+2. Try `` Ctrl+` `` to toggle the panel off and back on.
+3. If broken across all projects, quit + relaunch CodeNow — node-pty native module may have failed to rebuild.
+
+## Drag-and-drop file from Finder to terminal does nothing
+
+This was fixed in v0.1.4. If you're on an older version: re-download. If on v0.1.4+ and it still doesn't work:
+
+- The terminal must be focused first (click into it).
+- Multiple files are dropped as space-separated args; check if any path contains characters that need quoting.
+
+## "ANTHROPIC_API_KEY not set" when running an agent
+
+Your scaffolded agent reads from `.env.local` at the project root (NOT `.env`). Create it:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Get a key from https://console.anthropic.com — first $5 is free.
+
+## "agent error: Cannot find module './recorder'"
+
+The scaffold dropped `recorder.ts` into your project root. If you don't see it, you have an older scaffold:
+
+1. Re-scaffold a fresh agent in a temporary folder
+2. Copy the new `recorder.ts` (or `recorder.py`) into your project
+3. Add the import + `record(stream, ...)` wrap to your `agent.ts` / `agent.py` — see the new scaffold's file as a template
+
+<Callout type="info">
+  Still stuck? File an issue at [github.com/karlmehta/codenow/issues](https://github.com/karlmehta/codenow/issues) with the output of `codesign -dv` and `npm run agent:dev` (or `python agent.py`).
+</Callout>
+
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/troubleshooting/install.mdx)

@@ -1,0 +1,51 @@
+---
+title: Runs and replay
+---
+
+# Runs and replay
+
+Every time your agent runs — local dev or Agent21 production — CodeNow captures the entire interaction as a **run**: a sequence of events stored as JSONL in `.codenow/runs/{slug}/{ts}-{runId}.jsonl`.
+
+## What's in a run
+
+```
+{ "kind": "run.start", "runId", "slug", "ts", "input", "kit", "model" }
+{ "kind": "message", "ts", "message": <raw SDK message> }     ← assistant text
+{ "kind": "message", "ts", "message": <raw SDK message> }     ← tool_use
+{ "kind": "message", "ts", "message": <raw SDK message> }     ← tool_result
+…
+{ "kind": "run.end", "ts", "durationMs", "status", "resultMessage" }
+```
+
+The recorder shipped in every CodeNow-scaffolded agent appends these as the run executes. JSONL is append-only — never has to rewrite an existing file.
+
+## Storage caps
+
+To keep `.codenow/runs/` from growing forever, the recorder prunes on every new run start:
+- **100 runs per slug**
+- **500 runs total** across all agents in the project
+
+Pruning is async and best-effort — it never blocks an agent run.
+
+## Replay viewer
+
+Open the **Runs** sub-tab in the Agents panel. Every recorded run is listed newest-first with cost, duration, status, source (local / production). Click any row to open the **Replay viewer**:
+
+- Step-by-step timeline — colored icons per event kind (input · system init · assistant text · tool call · tool result · result · error · end)
+- Keyboard nav — `j`/`k` to step, `Space` to expand the current step's details, `Esc` to close
+- Tool call args + tool results expand inline as collapsed `<details>` blocks
+
+## Fork to current code
+
+The screenshot Cursor can't ship: take any past run, hit **Fork to current code →**, and CodeNow re-runs the same input through your *current* local agent code (spawning `tsx agent.ts "<input>"` or `python3 agent.py "<input>"`). Then it shows the original and the fork side-by-side:
+
+- ✓ "Output matches" if the assistant text is identical
+- ⚠ "Output differs" otherwise — with cost/duration/step-count deltas
+
+This is how you verify "my refactor didn't change behavior" — replay yesterday's prod incident through today's code.
+
+## Production runs
+
+When you connect Agent21, the **Runs** tab also shows production runs from the marketplace. They merge into the same chronological list with a **prod** badge. Production runs are read-only — you can replay them but not Fork (since they ran on Agent21's infrastructure, not yours).
+
+See [/concepts/manifests](/concepts/manifests) for how the production manifest preserves provenance.

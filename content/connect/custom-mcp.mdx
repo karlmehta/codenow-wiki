@@ -1,0 +1,30 @@
+---
+title: Custom MCP server
+---
+
+# Custom MCP server
+
+Anything that speaks the Model Context Protocol can be wired into CodeNow as a connector.
+
+## Add a custom MCP
+
+1. Open the **Connections** sidebar tab
+2. Click **+ Add Custom MCP Server**
+3. Enter:
+   - **Name** — what it shows up as in the Connectors list
+   - **URL** — the MCP server's HTTP endpoint, OR
+   - **Command** — for stdin/stdout MCP servers (`mcp-server-foo --some-flag`)
+   - **Auth** — optional headers, env vars, or OAuth flow
+
+The connector becomes available to the AI in this project.
+
+## Building your own MCP server
+
+The Model Context Protocol is open. You can write a custom MCP server in any language. CodeNow's Visual Tool Builder generates MCP-compatible tool files from a schema — see [/build/first-agent](/build/first-agent) for that flow.
+
+External resources:
+- [Model Context Protocol spec](https://modelcontextprotocol.io/)
+- [MCP server SDK (TypeScript)](https://github.com/modelcontextprotocol/typescript-sdk)
+- [MCP server SDK (Python)](https://github.com/modelcontextprotocol/python-sdk)
+
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/connect/custom-mcp.mdx)

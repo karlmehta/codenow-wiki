@@ -1,0 +1,73 @@
+---
+title: The 2026 Agent (mental model)
+---
+
+# The 2026 Agent (mental model)
+
+CodeNow's Anatomy view is built around Anthropic's "2026 Agent" mental model — seven labeled regions every real agent has. This page is the printable cheat sheet.
+
+import { Callout } from 'nextra/components';
+
+## The card
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  [icon] AgentName  workspace · projectName     ● 3 subagents
+│  ┌─────┐                                                 
+│  │skill│ ──────── chat conversation ─────                
+│  ├─────┤  user: Schedule the Q3 review and prep brief   
+│  │skill│  agent: I found three open slots — pick one... 
+│  ├─────┤  ┌──────────────────────────────────────┐      
+│  │skill│  │ Pick a slot          calendar mcp app │      ← rich widget
+│  └─────┘  │ [Tue 14·10:00] [Wed 15·14:30] ...    │      
+│           └──────────────────────────────────────┘      
+│           ▶ composing notes =drive.search("Q2 review")  ← composes calls
+│                                                          
+│           Connectors                                     
+│           [Cal] Google Calendar                          
+│           [✉] Gmail                                     
+│           [#] Slack                                      
+│                                                          
+│  ● Task · indexing repo · 2m  ● 14 servers connected  +  ← long-running + discover tools
+└─────────────────────────────────────────────────────────┘
+```
+
+## Seven regions
+
+| Region | Vocabulary | What it represents |
+|---|---|---|
+| **Identity** (top-left) | "icon · name · workspace" | Who this agent is |
+| **Subagents** (top-right) | "● N subagents" | What it can delegate to |
+| **Skills rail** (left) | "Applies skills · domain knowledge" | What it knows |
+| **Conversation** (center) | "Rich interaction · MCP Apps" | What you said + what it said + interactive widgets |
+| **Composes calls** (inline code) | "MCP + CLI as code" | What it's doing right now (tool calls) |
+| **Connectors** (bottom-center) | "Connected servers" | What it can reach |
+| **Long-running tasks** (bottom-left status) | "async, surfaced" | What it's working on in the background |
+| **Discovers tools** (bottom-right `+`) | "progressive" | How it gets new capabilities |
+
+## Why this view matters
+
+Non-developers don't have a mental picture of "an agent." Saying "it's a function that calls an LLM in a loop" doesn't help. **Showing them this card does.**
+
+The same card is also the demo screenshot for technical buyers. Anthropic's research mockup showed this view as where AI app surfaces are heading; CodeNow built it as the actual UI of every agent.
+
+## Mapping CodeNow data → regions
+
+CodeNow's Anatomy panel populates each region from real project files:
+
+- **Identity** ← `.codenow/agent-studio/agents/{slug}.json` manifest
+- **Subagents** ← `manifest.tools.length` (clickable to drawer with usage stats)
+- **Skills rail** ← `.codenow/skills.json`, color-hashed deterministically per skill ID
+- **Conversation** ← last 10 recorder runs from `.codenow/runs/{slug}/*.jsonl`
+- **Composes calls** ← `tool_use` events from the latest run
+- **Connectors** ← per-project MCP from `~/.codenow/connections.json`
+- **Long-running tasks** ← runs without a `run.end` event (still in flight)
+- **Discovers tools** ← `+` button opens the [Visual Tool Builder](https://github.com/karlmehta/codenow/blob/main/src/agent-kits.js)
+
+<Callout type="info">
+  No mocks. Every region updates as the underlying file changes — no sync step.
+</Callout>
+
+## Source
+
+This mental model was distilled from Anthropic's 2026 research mockup. The vocabulary maps cleanly onto every modern agent harness — Claude Agent SDK, Cursor SDK, Microsoft Agent Framework, Google ADK — so the same card explains agents built with any of them.
