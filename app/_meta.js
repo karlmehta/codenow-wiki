@@ -6,7 +6,7 @@ export default {
   },
   'get-started': 'Get Started',
   concepts: 'Concepts',
-  build: 'Build',
+  tutorials: 'Build',
   connect: 'Connect',
   reference: 'Reference',
   troubleshooting: 'Troubleshooting',

@@ -6,8 +6,6 @@ title: Build your first agent
 
 Scaffold, test, replay, and publish your first AI agent in CodeNow.
 
-import { Callout } from 'nextra/components';
-
 ## The 60-second version
 
 Open the Agents panel → **Anatomy** → **Build your first agent in 60 seconds**.
@@ -16,7 +14,7 @@ CodeNow scaffolds a runnable Hello Agent using **Claude Agent SDK (TypeScript)**
 
 ## What gets scaffolded
 
-```
+```text
 your-project/
 ├── agent.ts              ← your agent's brain (the prompt + tools)
 ├── recorder.ts           ← captures every run as JSONL (auto-injected)
@@ -26,12 +24,12 @@ your-project/
 ├── START_HERE.md         ← 3-step intro, delete after reading
 └── .codenow/
     └── agent-studio/
-        ├── agents/{slug}.json     ← manifest
+        ├── agents/SLUG.json       ← manifest
         ├── prompts/               ← versioned system prompts
         └── evals/                 ← smoke tests
 ```
 
-## The five harness choices
+## The four harness choices
 
 | Harness | Language | Default model | Use when |
 |---|---|---|---|
@@ -44,12 +42,12 @@ See [/concepts/harnesses](/concepts/harnesses) for the deeper breakdown.
 
 ## The lifecycle
 
-```
-Anatomy  →  Run  →  Test  →  Runs (Replay)  →  Trace  →  Evals  →  Tools  →  Prompts  →  Skills  →  Publish
+```text
+Anatomy → Run → Test → Runs (Replay) → Trace → Evals → Tools → Prompts → Skills → Publish
    ↑___________________________________ iterate _____________________________________|
 ```
 
-Each sub-tab in the Agents panel addresses one part of the lifecycle. Most non-trivial work happens in **Anatomy** (the visual card with live chat) + **Runs** (replay any past run) + **Tools** (Visual Tool Builder) + **Publish** (Agent21 OAuth + 1-click monetize).
+Each sub-tab in the Agents panel addresses one part of the lifecycle.
 
 ## Coming on this page
 
@@ -58,10 +56,8 @@ Each sub-tab in the Agents panel addresses one part of the lifecycle. Most non-t
 - Setting up evals for regression testing
 - Connecting Agent21 and publishing
 
-In the meantime, the [Get Started guide](/get-started#6-build-your-first-agent) covers the linear flow.
+In the meantime, the [Get Started guide](/get-started) covers the linear flow.
 
-<Callout type="info">
-  Stuck? The agent itself can help. Open the bottom Claude Code terminal and ask: "Add a tool to agent.ts that fetches the weather for a city the user mentions." The AI will edit the file, you run, you replay.
-</Callout>
+> **Stuck?** The agent itself can help. Open the bottom Claude Code terminal and ask Claude to add a new tool. The AI will edit the file, you run, you replay.
 
-[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/build/first-agent.mdx)
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/tutorials/first-agent.mdx)
