@@ -20,13 +20,107 @@ CodeNow centers on **multi-project tabs in one window** — every project you wo
 - Terminal session — real shell, no sandbox, persistent across project switches
 - Knowledge bundle (`CLAUDE.md` / `AGENTS.md` / `GEMINI.md` / `.aider.conf.yml` — generated from one source)
 
-## Coming on this page
+## Build a real Express app — start to finish
 
-- Step-by-step screenshot walkthrough of building an Express app
-- Multi-model comparison: same prompt → Claude / GPT / Gemini side-by-side
-- Real deploy flow (Vercel / Cloud Run)
-- Auto-import from VS Code / Cursor / Claude Code on first launch
+Concrete walkthrough. Open CodeNow → **+** to add a new project (pick or create an empty folder, e.g. `~/code/hello-express`) → click into the new tab.
 
-In the meantime, the [Get Started guide](/get-started) covers the linear flow.
+### 1. Open the terminal
 
-[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/tutorials/first-app.mdx)
+Press `` Ctrl+` `` (backtick). The bottom panel slides up with a real shell — full system access, no sandbox.
+
+### 2. Start Claude Code (or any other model)
+
+Click the **Claude Code** tab in the bottom panel. CodeNow runs `claude` in your project folder. Or click the model switcher at the top → switch to **Codex** / **Gemini CLI** / **Aider** if you prefer; same flow.
+
+### 3. Ask for the app
+
+Paste this prompt into Claude Code:
+
+> *"Create an Express 4 app in `server.js` that serves a hello-world page on `GET /`, a `GET /health` endpoint that returns `{ ok: true, time: <iso> }`, and a `POST /echo` that returns whatever JSON the client sent. Add `package.json` with start/dev scripts. Then `npm install` and run it."*
+
+Claude writes `server.js`, `package.json`, runs `npm install`, then runs `npm start`. You see the server listening on `http://localhost:3000` in the terminal.
+
+### 4. Test it without leaving CodeNow
+
+Open a second terminal tab (`Cmd+T`) and curl your endpoints:
+
+```bash
+curl localhost:3000
+curl localhost:3000/health
+curl -X POST -H 'Content-Type: application/json' -d '{"hi":"there"}' localhost:3000/echo
+```
+
+If any endpoint misbehaves, ask Claude to fix it in the first terminal — same context, same files.
+
+## Multi-model comparison — same prompt, three models
+
+Open the **Agents** panel → **Run** sub-tab. This is the multi-model studio: paste a prompt, fan it out to multiple models in parallel, compare side-by-side.
+
+```
+System prompt   (optional)
+User prompt     "Refactor server.js to use async/await for the POST /echo handler.
+                 Keep the response shape identical."
+
+Models — runs in parallel
+[ ☑ Claude Opus ]  [ ☑ GPT-5 ]  [ ☑ Gemini 2.5 Pro ]   [+ Add model]
+
+[Run all]
+```
+
+Hit **Run all**. Three cards appear, each with the model's response, latency, token count, cost. Decide which output you like best, or take a feature from one and a paragraph from another. Snapshot the winner as an eval (one click, top-right of each card) so you have a regression test if the prompt drifts later.
+
+This is what Cursor and VS Code don't ship — the **post-write loop**, not just the write loop.
+
+## Real deploy — Vercel and Cloud Run
+
+CodeNow doesn't sandbox the terminal, so `vercel`, `gh`, `gcloud`, `fly`, `railway` all run from the bottom panel. No CodeNow-specific deploy step needed; you use the official CLI for whichever provider you ship to.
+
+### Vercel
+
+```bash
+# In CodeNow's terminal, in the project root
+vercel              # first time: pick scope, project name, defaults
+vercel --prod       # promote to production
+```
+
+CodeNow auto-imported your Vercel CLI auth on first launch (see Auto-import section below), so you're already logged in.
+
+### Cloud Run
+
+```bash
+gcloud run deploy hello-express --source . --region us-central1
+```
+
+Same — `gcloud` auth comes from your existing `gcloud auth login`. CodeNow doesn't reauth you; it uses your local credentials.
+
+### Other targets
+
+- **Fly:** `fly launch && fly deploy`
+- **Railway:** `railway init && railway up`
+- **GitHub Pages / Releases:** `gh release create v0.1.0 ./dist/app.zip`
+
+The terminal is the same shell you'd have outside CodeNow. Pick any provider.
+
+## Auto-import on first launch
+
+CodeNow scans for credentials and configs from other dev tools when you launch it the first time. You'll see a list of detected sources with checkboxes:
+
+| Source | What gets imported |
+|---|---|
+| **VS Code** | Settings, keybindings, theme, installed extensions list |
+| **Cursor** | Same as VS Code, plus active Cursor model preference |
+| **Claude Code** | API key, last-used model, `CLAUDE.md` files in recent projects |
+| **`gh` CLI** | Auth token, default org |
+| **`vercel` CLI** | Team scope, default project linkage |
+| **`gcloud` CLI** | Active config, project ID, account |
+| **`aider` config** | `.aider.conf.yml`, model + commit format prefs |
+| **Anthropic Console** | API key (if `ANTHROPIC_API_KEY` is in shell env or `~/.zshenv`) |
+| **OpenAI / Google AI Studio** | Same — env-var sniff |
+
+Uncheck anything you don't want. Click **Import**. Done — you have a working dev environment in 30 seconds, no manual setup.
+
+The detection logic lives in `src/migration.js` in the IDE source if you want to inspect what's actually read.
+
+> **Note:** CodeNow never uploads your credentials anywhere. Auto-import is a local file-to-file copy into `~/.codenow/`. Your tokens stay on your machine.
+
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/app/tutorials/first-app/page.mdx)
