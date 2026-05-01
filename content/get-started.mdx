@@ -1,0 +1,172 @@
+---
+title: Get Started in 5 minutes
+description: Download CodeNow, connect your tools, and ship your first app and your first agent — in five minutes flat.
+---
+
+# Get Started in 5 minutes
+
+By the end of this page you'll have CodeNow running on your machine, connected to your tools, and you'll have shipped both your first app and your first agent.
+
+import { Steps, Callout, Tabs, FileTree } from 'nextra/components';
+
+<Callout type="info" emoji="⏱">
+  This guide assumes you have nothing installed yet. If you already have CodeNow open and just want the quick demos, jump to [Build → First App](/build/first-app) or [Build → First Agent](/build/first-agent).
+</Callout>
+
+## What you'll have at the end
+
+- ✓ CodeNow running, signed in, your project tools auto-imported
+- ✓ Slack / GitHub / Jira connected via MCP (the per-project way)
+- ✓ A small app you wrote with multi-model AI assistance, deployed
+- ✓ A working AI agent you scaffolded, tested, and ran through the **Live Replay** viewer
+
+## 1. Download CodeNow
+
+<Steps>
+
+### Pick your platform
+
+<Tabs items={['macOS (Apple Silicon)', 'macOS (Intel)', 'Windows', 'Linux']}>
+  <Tabs.Tab>
+    Download the signed + notarized `.dmg` from [codenow.pro/api/download?os=mac](https://codenow.pro/api/download?os=mac) — about 100 MB.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    Intel Mac builds are coming. For now, the [Apple Silicon DMG](https://codenow.pro/api/download?os=mac) runs under Rosetta 2.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    Windows builds are coming. Track progress on the [GitHub Releases page](https://github.com/karlmehta/codenow/releases).
+  </Tabs.Tab>
+  <Tabs.Tab>
+    Linux AppImage is coming. Track progress on the [GitHub Releases page](https://github.com/karlmehta/codenow/releases).
+  </Tabs.Tab>
+</Tabs>
+
+### Install
+
+Open the DMG, drag **CodeNow.app** to **Applications**, then launch from Applications or Spotlight (`Cmd+Space → CodeNow`). The app is signed by *Developer ID Application: PREDIXTIONS INC* and notarized by Apple — first launch should be Gatekeeper-clean (no "unidentified developer" warning).
+
+<Callout type="info">
+  If macOS still warns, right-click → **Open** → **Open** the first time. Subsequent launches don't ask.
+</Callout>
+
+</Steps>
+
+## 2. Sign in (or skip)
+
+CodeNow works fully without an account, but signing in syncs your settings and unlocks the Agent21 marketplace. Sign in with email or use the auto-imported credentials — CodeNow detects and offers to import keys from VS Code, Cursor, Claude Code, and `gh` CLI on first launch.
+
+## 3. Add a project
+
+Click the `+` next to the project tabs at the top of the window, pick a folder. CodeNow auto-detects the framework, language, and existing tooling — no config required.
+
+<Callout type="info" emoji="💡">
+  CodeNow is built around **multi-project tabs** — every project is one tab in the same window, never separate processes. Switch with `Cmd+1`/`Cmd+2`/etc.
+</Callout>
+
+## 4. Connect your tools
+
+Open the **Connections** sidebar tab. CodeNow lists every MCP server scoped to the active project (so a customer-portal project doesn't see your internal-tools project's Jira, etc.).
+
+<Steps>
+
+### Slack
+Click **Slack** → OAuth to your workspace. Connection is per-project; the AI in this project gets read access to the channels you authorize.
+
+### GitHub
+Click **GitHub** → install the GitHub MCP. Used for issue context, PR diffs, repo-aware AI suggestions.
+
+### Jira
+Click **Jira** → connect via Atlassian OAuth. Tickets become first-class context for AI prompts.
+
+### Custom MCP
+Anything that speaks the Model Context Protocol can be wired up via **+ Add Custom MCP Server** — Notion, Linear, custom internal tools.
+
+</Steps>
+
+<Callout type="default" emoji="🔒">
+  Connections are project-scoped — when you switch project tabs, the AI's available tools change. You don't accidentally leak production Jira context into a side project.
+</Callout>
+
+## 5. Build your first app
+
+The fastest path: ask the AI to do it.
+
+<Steps>
+
+### Open the bottom terminal
+Press `` Ctrl+` `` (backtick). The terminal panel appears with a real shell — full system access, no sandbox.
+
+### Start the AI assistant
+Click **Claude Code** tab in the bottom panel (or run `claude` directly). The assistant runs against your active project's files. Drag any file from Finder onto the terminal to paste its absolute path — saves typing.
+
+### Ask
+> "Create a small Express app that serves a hello world page on port 3000 and adds a /health endpoint that returns the current time. Then run it."
+
+The AI writes the files, hands you the run command. When you're done, deploy with one of the built-in deploy commands — `vercel` for Vercel, `gh` for GitHub releases, or any of the standard CLIs.
+
+### Switch models if you want
+Click the model switcher at the top — Claude Code, OpenAI Codex, Gemini, Aider, Copilot. Per-project, so each project remembers its preferred model.
+
+</Steps>
+
+## 6. Build your first agent
+
+Now the agent half. CodeNow ships first-class scaffolds for [four agent harnesses](/concepts/harnesses) so you don't have to bring your own SDK.
+
+<Steps>
+
+### Open the Agents sidebar
+The **Agents** tab in the sidebar shows the agent lifecycle: Anatomy · Run · Test · Runs · Trace · Evals · Tools · Prompts · Skills · Publish.
+
+### Build a fresh agent
+Click **Anatomy** → **Build your first agent in 60 seconds**. CodeNow scaffolds a runnable starter using **Claude Agent SDK (TypeScript)** by default. You can pick a different kit:
+
+| Harness | Best for |
+|---|---|
+| **Claude Agent SDK** | Anthropic API, best Claude integration |
+| **Cursor SDK** | Multi-model + Composer 2, sandboxed cloud VMs |
+| **Microsoft Agent Framework** | Azure-native enterprise stacks |
+| **Google ADK** | Vertex AI, Gemini-native |
+
+### Add your API key
+The scaffold drops a `START_HERE.md`. Open it. It tells you the one env var you need (`ANTHROPIC_API_KEY` for Claude, `CURSOR_API_KEY` for Cursor, `AZURE_OPENAI_API_KEY` + endpoint for Microsoft, `GOOGLE_API_KEY` for Google). Put it in `.env.local` (already gitignored).
+
+### Run it
+Type a message in the **Anatomy** tab's chat box and hit Enter. CodeNow spawns the agent, runs it, captures the run as a recordable timeline. The response appears as a chat turn with cost + duration.
+
+Or run from the terminal: `npm run agent:dev` (TS) / `python agent.py` (Python).
+
+### Replay it
+Open the **Runs** tab. Every run is there with cost, latency, status. Click any run to step through the timeline — every tool call, every model response, every token. Click **Fork to current code →** to re-run the same input through your *current* local agent and diff side-by-side.
+
+### Add a tool
+Open the **Tools** tab → **+ New Tool**. The Visual Tool Builder takes a name + schema and emits SDK-correct boilerplate (`tool()` + `createSdkMcpServer()`). Drag the new tool from the Tools tab onto the **Anatomy** card → it's added to `manifest.tools`.
+
+### Publish
+Once it works locally, **Publish** → **Connect Agent21** → **Publish** packages your manifest (prompts + evals + tool signatures + guardrails) and POSTs to the Agent21 marketplace under your team's branding.
+
+</Steps>
+
+## You're done
+
+In about five minutes you've:
+
+- Installed a signed, notarized macOS IDE
+- Wired Slack / GitHub / Jira per-project (MCP)
+- Shipped a small Express app via terminal + AI assist
+- Scaffolded an agent with the Claude Agent SDK
+- Run it through the Live Replay viewer
+- Added a custom tool via the Visual Tool Builder
+- Published to Agent21
+
+## Next
+
+- **[Concepts → Agents](/concepts/agents)** — what an agent really is, with diagrams
+- **[Connect → Slack/GitHub/Jira](/connect/slack)** — deep-dive on each MCP integration
+- **[Build → First App](/build/first-app)** — guided path with screenshots
+- **[Build → First Agent](/build/first-agent)** — guided path through the harness picker
+- **[codenow.pro/trust](https://codenow.pro/trust)** — the trust + safety + observability story
+
+<Callout type="info">
+  Stuck? Open an issue at [github.com/karlmehta/codenow/issues](https://github.com/karlmehta/codenow/issues) — and check [Troubleshooting → Install](/troubleshooting/install) first.
+</Callout>

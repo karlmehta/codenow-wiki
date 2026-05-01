@@ -1,0 +1,50 @@
+---
+title: Harnesses
+---
+
+# Harnesses
+
+A **harness** is the runtime that wraps your agent — the orchestration layer that decides when to call a tool, what to send the model, how to assemble a response. CodeNow ships first-class scaffolds for four harnesses out of the box.
+
+import { Callout, Cards } from 'nextra/components';
+
+## Shipped today
+
+<Cards>
+  <Cards.Card title="Claude Agent SDK (TS + Python)" href="https://docs.claude.com/en/api/agent-sdk/overview" arrow>
+    Anthropic's official harness. Best Claude integration. Streaming `query()` API.
+  </Cards.Card>
+  <Cards.Card title="Cursor SDK (TypeScript)" href="https://cursor.com/blog/typescript-sdk" arrow>
+    Cursor's harness with Composer 2 + multi-model. Sandboxed cloud VMs, subagents, hooks.
+  </Cards.Card>
+  <Cards.Card title="Microsoft Agent Framework" href="https://learn.microsoft.com/en-us/agent-framework/" arrow>
+    Microsoft's official agent SDK (Semantic Kernel + AutoGen merged). Azure OpenAI native.
+  </Cards.Card>
+  <Cards.Card title="Google ADK" href="https://google.github.io/adk-docs/" arrow>
+    Google's Agent Development Kit. Optimized for Gemini 2.0, Vertex AI native.
+  </Cards.Card>
+</Cards>
+
+## Coming
+
+LangGraph (LangChain ecosystem), OpenAI Agents SDK, CrewAI, MCP server. Track progress in the [agent-kits.js source](https://github.com/karlmehta/codenow/blob/main/src/agent-kits.js).
+
+## Picking a harness
+
+| If your stack is... | Pick |
+|---|---|
+| Anthropic API, want best Claude integration | Claude Agent SDK |
+| Already using Cursor / want multi-model + cloud sandboxing | Cursor SDK |
+| Microsoft enterprise (Windows, Office, Azure, .NET) | Microsoft Agent Framework |
+| Google Cloud / Vertex AI / Gemini-native | Google ADK |
+| Don't care, just give me the fastest first-run | **Claude Agent SDK (TypeScript)** — the default Hello Agent kit |
+
+<Callout type="info">
+  CodeNow's [Live Agent Replay](/concepts/runs) and [manifest](/concepts/manifests) work the same regardless of harness. Switch by re-scaffolding with a different kit; the lifecycle wrapper around it stays identical.
+</Callout>
+
+## How CodeNow integrates each harness
+
+Each scaffold drops a `recorder.ts` (or `recorder.py`) into your project that wraps the harness's stream. The wrapper writes JSONL events to `.codenow/runs/{slug}/` so the **Runs** tab can replay any past invocation. Zero runtime dependencies — Node built-ins / Python stdlib only. Fails open: any IO error is swallowed so a recorder bug never breaks your agent.
+
+This means **every harness gets the same observability surface** — Replay, Cost tracking, Fork-to-current-code, audit trail — for free.

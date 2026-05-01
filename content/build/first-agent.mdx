@@ -1,0 +1,67 @@
+---
+title: Build your first agent
+---
+
+# Build your first agent
+
+Scaffold, test, replay, and publish your first AI agent in CodeNow.
+
+import { Callout } from 'nextra/components';
+
+## The 60-second version
+
+Open the Agents panel → **Anatomy** → **Build your first agent in 60 seconds**.
+
+CodeNow scaffolds a runnable Hello Agent using **Claude Agent SDK (TypeScript)**. You add one env var (`ANTHROPIC_API_KEY` in `.env.local`) and you're running.
+
+## What gets scaffolded
+
+```
+your-project/
+├── agent.ts              ← your agent's brain (the prompt + tools)
+├── recorder.ts           ← captures every run as JSONL (auto-injected)
+├── package.json          ← @anthropic-ai/claude-agent-sdk + tsx
+├── .env.example          ← lists ANTHROPIC_API_KEY
+├── .gitignore            ← already excludes .env.local + .codenow/runs/
+├── START_HERE.md         ← 3-step intro, delete after reading
+└── .codenow/
+    └── agent-studio/
+        ├── agents/{slug}.json     ← manifest
+        ├── prompts/               ← versioned system prompts
+        └── evals/                 ← smoke tests
+```
+
+## The five harness choices
+
+| Harness | Language | Default model | Use when |
+|---|---|---|---|
+| Claude Agent SDK | TS or Python | claude-opus-4-7 | Anthropic-first, fastest first-run |
+| Cursor SDK | TypeScript | composer-2 (any frontier) | Multi-model + sandboxed cloud VMs |
+| Microsoft Agent Framework | Python | Azure OpenAI deployment | Microsoft enterprise stack |
+| Google ADK | Python | gemini-2.0-flash | Gemini / Vertex AI / GCP-native |
+
+See [/concepts/harnesses](/concepts/harnesses) for the deeper breakdown.
+
+## The lifecycle
+
+```
+Anatomy  →  Run  →  Test  →  Runs (Replay)  →  Trace  →  Evals  →  Tools  →  Prompts  →  Skills  →  Publish
+   ↑___________________________________ iterate _____________________________________|
+```
+
+Each sub-tab in the Agents panel addresses one part of the lifecycle. Most non-trivial work happens in **Anatomy** (the visual card with live chat) + **Runs** (replay any past run) + **Tools** (Visual Tool Builder) + **Publish** (Agent21 OAuth + 1-click monetize).
+
+## Coming on this page
+
+- Step-by-step screenshot walkthrough of the four harness scaffolds
+- Adding your first tool via the Visual Tool Builder
+- Setting up evals for regression testing
+- Connecting Agent21 and publishing
+
+In the meantime, the [Get Started guide](/get-started#6-build-your-first-agent) covers the linear flow.
+
+<Callout type="info">
+  Stuck? The agent itself can help. Open the bottom Claude Code terminal and ask: "Add a tool to agent.ts that fetches the weather for a city the user mentions." The AI will edit the file, you run, you replay.
+</Callout>
+
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/build/first-agent.mdx)
