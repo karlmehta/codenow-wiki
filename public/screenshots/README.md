@@ -29,4 +29,18 @@ Drop screenshots here named to match the placeholders in `/reference/ui-map`:
 - `share-modal.png` — Collaboration / Share modal
 - `tool-builder.png` — Visual Tool Builder modal
 
+### Agent Card detail set (added 2026-05-01)
+
+Added after the Card/Code topbar toggle promotes the Anatomy card into the
+main editor area (auto-promoted when there's a single agent). These are
+cropped clips of the same render so the wiki / blog can embed each piece
+without competing UI.
+
+- `agent-card-hero.png` — full-window shot; the canonical "what is CodeNow" image
+- `agent-card-detail.png` — tight crop on the agent card itself (lifecycle + identity + skills rail + conversation)
+- `agent-card-skills-rail.png` — close-up on the Skills rail (rounded-square skill tiles + `+ New skill`)
+- `agent-card-lifecycle.png` — Build → Test → Skillify → Guardrails → Publish → Deploy bar
+- `agent-card-identity.png` — identity tile (model badge, agent name, "trained by", subagents counter)
+- `agent-card-conversation.png` — live conversation pane with multi-tool turn
+
 PNG preferred, 1920x1200 retina. WebP also fine. Each placeholder in the wiki page references one of these filenames; once you drop the file in, the image renders automatically (no markup change needed).
