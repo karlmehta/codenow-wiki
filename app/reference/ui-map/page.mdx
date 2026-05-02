@@ -200,20 +200,35 @@ The core of CodeNow's agent IDE story. Ten sub-tabs in lifecycle order.
 
 ### Anatomy sub-tab
 
-<img src="/screenshots/agents-anatomy.png" alt="Anatomy" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
+<img src="/screenshots/agent-card-detail.png" alt="Agent Card — Anatomy view" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
 
-Models the [Anthropic 2026 Agent](/concepts/mental-model) mockup.
+Models the [Anthropic 2026 Agent](/concepts/mental-model) mockup. Auto-promoted into the main editor area when there's a single agent (toggle Card / Code in the topbar to swap back to file editing).
 
 | Region | What it does |
 |---|---|
-| **Identity tile** (top-left) | Color-hashed icon + name + workspace breadcrumb. Multi-agent dropdown when project has >1 manifest |
+| **Lifecycle bar** (top, full-width) | Build → Test → Skillify → Guardrails → Publish → Deploy. Each step shows ✓ when its precondition is met; click any step to jump to its sub-tab |
+| **Identity tile** (top-left) | Color-hashed icon + name + workspace breadcrumb + model badge (click to switch model). Multi-agent dropdown when project has >1 manifest |
 | **Subagents pill** (top-right) | Click → drawer listing every tool with usage stats |
-| **Skills rail** (left vertical) | Color tiles per skill. Click → Skills tab. `+` tile → Skills tab to add. **Drop target** for skill drags |
+| **Skills rail** (left vertical) | Color tiles per skill. Click → edit modal (name + description + prompt). `+` tile → New skill modal. **Drop target** for skill drags from the Skills tab |
 | **Conversation pane** (center) | Chat thread of last 10 recorder runs. Type → spawn agent → response appears with cost/duration/replay link |
 | **Composes calls panel** | Tool_use events from latest run as code |
 | **Connectors strip** | Per-project MCPs. Click → Connections sidebar |
-| **Status bar** (bottom) | Pulsing live dot during runs · "Ready · N runs" otherwise · connector count · orange `+` Discover button → Visual Tool Builder |
+| **Status bar** (bottom) | Pulsing live dot during runs · "Ready · N runs" otherwise · connector count · orange `+ Tool` button → Visual Tool Builder · `Publish & Monetize ↗` → Agent21 wizard |
 | **Tasks drawer** (click status pill) | Running runs + recent runs (clickable to Replay) |
+
+#### Anatomy element close-ups
+
+<img src="/screenshots/agent-card-lifecycle.png" alt="Lifecycle bar" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
+<small>**Lifecycle bar** — Build · Test · Skillify · Guardrails · Publish · Deploy. Each step is a clickable shortcut.</small>
+
+<img src="/screenshots/agent-card-identity.png" alt="Identity tile" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
+<small>**Identity tile** — agent name (click to rename), workspace breadcrumb, "trained by" line, model badge (click to switch), subagents counter.</small>
+
+<img src="/screenshots/agent-card-skills-rail.png" alt="Skills rail" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
+<small>**Skills rail** — one rounded-square tile per skill (color-hashed by name). Click a tile to edit (name / description / prompt template). Click `+` to create a new skill.</small>
+
+<img src="/screenshots/agent-card-conversation.png" alt="Conversation pane" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
+<small>**Conversation pane** — last ten recorder runs as a chat thread. Each turn shows the user input, the assistant text, inline tool calls (`hubspot.lists.get(...)`), and a `replay →` link to open the full event timeline.</small>
 
 ### Run sub-tab (multi-model studio)
 
