@@ -8,25 +8,37 @@ CodeNow follows VS Code conventions where possible. macOS shortcuts shown below;
 
 ## Project navigation
 
-| Shortcut | Action |
-|---|---|
-| `Cmd+1` to `Cmd+9` | Switch to project tab N |
-| `Cmd+P` | Quick file open |
-| `Cmd+Shift+F` | Search across project |
-| `Cmd+\\` | Toggle sidebar |
-| `` Ctrl+` `` | Toggle terminal panel |
+| Shortcut | Action | Since |
+|---|---|---|
+| `Cmd+1` to `Cmd+9` | Switch to project tab N | |
+| `Cmd+P` | **Fuzzy file open** — quick-pick overlay; ↑/↓ to navigate, Enter to open, Esc to close. Skips `node_modules`, `.git`, `dist`, binaries; capped at 10k files | v0.1.7 |
+| `Cmd+Shift+F` | **Project-wide find-in-files** — opens the **Search** sidebar tab. Toggles: match-case (`Aa`), whole-word (`W`), regex (`.*`). Uses `ripgrep` when installed, Node fallback otherwise | v0.1.7 |
+| `Cmd+Shift+P` | **Command palette** — 30+ named commands across Files / Mode / Agents / Studio / Connections / Git / Theme / View / Account. Fuzzy filter | v0.1.7 |
+| `Cmd+\\` | Toggle sidebar | |
+| `` Ctrl+` `` | Toggle terminal panel | |
 
 ## Editor
 
-| Shortcut | Action |
-|---|---|
-| `Cmd+S` | Save file |
-| `Cmd+/` | Toggle line comment |
-| `Cmd+D` | Add next match to selection |
-| `Cmd+Shift+L` | Select all matches |
-| `Cmd+B` | Bold (in markdown) |
-| `Cmd+K Cmd+0` | Fold all |
-| `Cmd+K Cmd+J` | Unfold all |
+| Shortcut | Action | Since |
+|---|---|---|
+| `Cmd+S` | Save file | |
+| `Cmd+K` | **Inline edit** — natural-language edit on selection; streamed diff with accept/reject | v0.1.6 |
+| `Cmd+I` | **Composer** — multi-file agentic edit with plan → approve → apply | v0.1.6 |
+| `Tab` | **Accept ghost-text completion** (when shown). Claude Haiku 4.5 suggests after 600 ms idle. Topbar pill toggles on/off | v0.1.7 |
+| `Esc` | Dismiss ghost-text suggestion | v0.1.7 |
+| `Cmd+/` | Toggle line comment | |
+| `Cmd+D` | Add next match to selection | |
+| `Cmd+Shift+L` | Select all matches | |
+| `Cmd+B` | Bold (in markdown) | |
+| `Cmd+K Cmd+0` | Fold all | |
+| `Cmd+K Cmd+J` | Unfold all | |
+
+## Studio (Agents → Run / Test / Ask)
+
+| Shortcut | Action | Since |
+|---|---|---|
+| Type `@` in the User Prompt textarea | **@ mention picker** — recent files, then live filter as you type. `@web https://...` fetches a URL via the main process | v0.1.7 |
+| Click **Apply…** on a code block in a result | **Apply suggested code** — opens Monaco diff editor with Replace / Append / Insert at cursor modes before writing | v0.1.7 |
 
 ## Agents panel
 
@@ -36,6 +48,18 @@ CodeNow follows VS Code conventions where possible. macOS shortcuts shown below;
 | `Esc` | Close the Replay viewer (when in Runs tab detail) |
 | `j` / `k` | Step through Replay timeline |
 | `Space` | Toggle expansion of current Replay step |
+
+## Source control (Git pane)
+
+Shipped in v0.1.7 — the Git tab is now a real source-control surface, not read-only status.
+
+| Shortcut | Action |
+|---|---|
+| Click any changed file | Open Monaco diff editor in the main editor area |
+| `+` icon next to a file | Stage |
+| `−` icon next to a file | Unstage |
+| `↺` icon next to a file | Discard (with confirm) |
+| `Cmd+Enter` in the commit textarea | Commit staged changes |
 
 ## Terminal
 
@@ -53,5 +77,6 @@ CodeNow follows VS Code conventions where possible. macOS shortcuts shown below;
 | `Cmd+Shift+R` | Hard reload (clears cache too) |
 | `Cmd+Q` | Quit (full restart needed for `main.js` / `preload.js` changes) |
 | `Cmd+,` | Settings |
+| Click the **`vX.Y.Z`** pill in the topbar | File feedback in the wiki's GitHub issues |
 
-[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/content/reference/keyboard-shortcuts.mdx)
+[Edit this page →](https://github.com/karlmehta/codenow-wiki/blob/main/app/reference/keyboard-shortcuts/page.mdx)
