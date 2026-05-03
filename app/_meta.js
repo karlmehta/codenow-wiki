@@ -10,4 +10,5 @@ export default {
   connect: 'Connect',
   reference: 'Reference',
   troubleshooting: 'Troubleshooting',
+  'release-notes': 'Release notes',
 };

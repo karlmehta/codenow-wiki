@@ -1,0 +1,116 @@
+---
+title: v0.1.7 — IDE essentials
+---
+
+# v0.1.7 — IDE essentials
+
+**Released 2026-05-03.** Eight Cursor / Windsurf / VS Code parity features plus four beta-user blockers from v0.1.6 feedback.
+
+> Auto-update will land this on every existing v0.1.6 install. Brand-new users get it from [codenow.pro/download](https://codenow.pro/download/mac).
+
+## What's new
+
+### Cmd+P — fuzzy file finder
+
+Press `Cmd+P` (Mac) or `Ctrl+P` (Windows / Linux) to fuzzy-search every file in the active project. Skips `node_modules`, `.git`, `dist`, `build`, `.codenow`, plus binary extensions. Caps at 10k files with a "truncated" warning when a project is bigger.
+
+- ↑/↓ navigates the result list
+- Enter opens the highlighted file in Monaco
+- Escape or click-outside closes
+
+### Cmd+Shift+F — project-wide find-in-files
+
+New **Search** sidebar tab. Press `Cmd+Shift+F` to focus the input. Toggles for **match case** (`Aa`), **whole word** (`W`), and **regex** (`.*`).
+
+- Uses [`ripgrep`](https://github.com/BurntSushi/ripgrep) when installed (fast)
+- Falls back to a pure-Node scan otherwise
+- Up to 1000 matches, 50 per file, snippets clipped to 240 chars
+- Click a match → opens the file in Monaco at the line
+
+### Cmd+Shift+P — command palette
+
+`Cmd+Shift+P` (or `Ctrl+Shift+P`) opens a centered palette of 30+ named commands — Files, Mode, Agents, Studio, Connections, Git, Theme, View, Account.
+
+- Fuzzy filter
+- Enter runs the highlighted command
+- If a command isn't available right now (e.g. no project open), you get a toast instead of a silent fail
+
+### @ mentions in the Studio prompt
+
+Type `@` in the **Run** tab's User Prompt textarea to inject context:
+
+- `@<filename>` — recent files appear as you type
+- `@web https://...` — fetch URL text via the main process (5 s timeout, 200 KB cap, HTML stripped)
+- Chips show above the prompt with a × to remove
+- At run-time, chip contents are prepended to the system message as `--- @<chip>\n<contents>\n---` blocks
+
+### Apply button on AI-suggested code blocks
+
+After a Studio Run, every fenced code block in the response gets a header with **Copy** and **Apply…** buttons.
+
+- **Apply** opens a Monaco diff editor
+- Modes: **Replace file**, **Append**, **Insert at cursor**
+- Path validator rejects absolute paths, drive letters, `..` segments
+- After write, open editor tabs reload to reflect the change
+
+### "Ask" — repo-wide codebase Q&A
+
+New **Ask** sub-tab in the Agents panel. Type a question; CodeNow runs a lexical search over the project, picks the top-5 hits, and feeds them to your selected provider as system-prompt context. The answer renders inline with clickable citations that jump straight to the cited file.
+
+- Index cached at `<project>/.codenow/codebase-index.json`
+- Mtime-aware — only rebuilds files that changed
+- v0.1.7 is lexical (TF×IDF). v0.1.8 will swap to embeddings.
+
+### Tab autocomplete
+
+Monaco now hosts an `InlineCompletionsProvider` powered by Claude Haiku 4.5.
+
+- Triggers after 600 ms of idle typing
+- Surrounding ±50 lines + cursor position go to Haiku
+- Tab accepts, Esc dismisses, any other keystroke also dismisses
+- **Cost guards**: skips files > 2000 lines or context windows > 8000 chars
+- Topbar pill toggles it on/off; default on if you have an Anthropic key, off otherwise
+
+### Source-control panel (real this time)
+
+The Git sidebar tab is now a real source-control surface, not a read-only status:
+
+- **Staged Changes**, **Changes** (working tree), **Recent Commits** — collapsible
+- Per-file `+` (stage), `−` (unstage), `↺` (discard, with confirm)
+- Click any filename → Monaco diff editor opens in the main editor area
+- Commit textarea + button at top, `Cmd+Enter` submits, draft persisted per project
+
+## Beta-user blockers from v0.1.6 — fixed
+
+### Dev → Business agent handoff
+
+Engineers build agents in Dev mode (manifests in `<project>/.codenow/agent-studio/agents/`). Previously, switching to Business mode and clicking **Import Agent** offered only HTTP / Agent21 / Catalog sources — no way to import the agent you just built.
+
+v0.1.7 adds a **From this workspace** source type that's the new default when a project is open. Pick a manifest, click Save — the Business catalog now points at your local agent. The main process dispatches via `studio.runPrompt` using the manifest's `preferredModel` (or any provider you have a key for).
+
+### "Manage keys" actually manages keys
+
+The Studio Run pane's `Manage keys` link used to switch to the **Connections** (MCP) sidebar tab — wrong place. It now opens a real BYOK modal for **Anthropic / OpenAI / Google** with per-provider Save / Replace / Remove and signup links.
+
+### CLI auth detection
+
+If you've already authenticated `codex`, `gemini`, or `claude` CLIs locally, CodeNow now detects that — surfaces "Signed in via CLI" instead of "no key" everywhere. Probes `~/.codex/auth.json`, `~/.gemini/oauth_creds.json`, `~/.claude/.credentials.json` plus the macOS keychain entry for Claude Code.
+
+### Version pill in topbar
+
+Every CodeNow window now shows its build version as a pill in the top-right of the title bar (e.g. `v0.1.7`). Click it to file feedback in the wiki's GitHub issues.
+
+## Smoke
+
+| Stage | Result |
+|---|---|
+| `npm run smoke:static` | 0 errors / 0 warnings / 43 info |
+| `npm run smoke:runtime` | 53 / 54 ✓ (1 known fixture-timing flake on the new Git pane in headless Playwright; feature works in real use) |
+| `npm run smoke:e2e:dev-business` | 10 / 10 ✓ — full beta-user flow |
+
+## Known issues / shipping next
+
+- **Embeddings for the codebase indexer.** Lexical TF×IDF gives 80% of the feel for 10% of the work; semantic upgrade lands in v0.1.8.
+- **Apply button** does not yet handle multi-file diffs in one shot. Use Composer (`Cmd+I`) for that flow.
+- **Tab autocomplete** is single-suggestion only. Cursor-style "ghost three lines, accept fragment" is on the roadmap.
+- **Stripe billing + tier enforcement** still queued — pricing tiers on the website are display-only.
