@@ -1,0 +1,159 @@
+---
+title: v0.1.8 — Zed parity + production primitives
+---
+
+# v0.1.8 — Zed parity + production primitives
+
+**Released 2026-05-03.** The biggest release since launch. Eight new features, four production-grade engineering primitives, two onboarding fixes, and seven bug fixes. Auto-update will pull this in on your next launch if you're on v0.1.6 or v0.1.7. New users can grab it from [codenow.pro/download](https://codenow.pro/download/mac).
+
+## Headline: Zed parity in one cycle
+
+A user moving from Zed.dev asked us for the comparison. We answered with the four features Zed had that we didn't — and shipped them in the same week:
+
+### Real-time collaborative editing (CRDT)
+
+Open the same file in two CodeNow windows on the same project. Click **Go live** on each. Live cursors with name tags, simultaneous edits, no merge conflicts.
+
+- Built on **Yjs + y-monaco**, the same CRDT stack Figma uses.
+- Transport over Supabase Realtime broadcast — no separate WebSocket relay to deploy.
+- Per-project **opt-in** (sync traffic is real bandwidth; users consent).
+- Doc state persisted to a new `crdt_snapshots` Supabase table per `(project_id, file_path)` — a user joining mid-session resumes from the latest snapshot.
+
+Known v0.1.8 limitation: a user joining *during* an active session may miss updates that happened before their join, since Supabase broadcast doesn't persist messages. v0.2.0 will swap to a y-websocket relay with full sync history. For now, joining at-rest is rock-solid; joining mid-edit is best-effort.
+
+### Voice pair-programming (WebRTC)
+
+Click **Join voice** in the topbar. Mic-permission prompt → connection. Pill flips to `Voice · live · N peers`.
+
+- Direct-peer WebRTC. STUN-only (Google's `stun.l.google.com:19302`) — symmetric-NAT users will need TURN in v0.2.2.
+- Signaling over Supabase Realtime broadcast on `voice:{projectHash}`. No new infrastructure.
+- Audio-only for now. Video, screen-share, and remote-mute land later.
+- Mute is `track.enabled = false` — local toggle, peers see the indicator update.
+
+### First-class Vim mode
+
+Click `Vim · off` in the topbar (next to the version pill). monaco-vim AMD-loads on first toggle.
+
+- Normal / Insert / Visual modes; `:w`, `:q`, `:%s/foo/bar/g`, `dd`, `yy`, `gg`, `G`, `f<char>` — the standard set.
+- Status bar at editor bottom shows `-- INSERT --` and command line.
+- Persists in `~/.codenow/settings.json` `vimModeEnabled`.
+- Wired into both the main editor AND the diff editor in the source-control panel + the Apply-code modal. (Cmd+K inline overlay is intentionally unaffected — its widget keymap would fight Vim's normal-mode handler.)
+
+### Slack-style team channels
+
+Business mode → Workforce → Channels.
+
+- New tables `team_channels` + `team_messages` in Supabase, RLS scoped to project membership.
+- Real-time via Supabase Postgres-changes subscription. Messages appear in other windows within ~500ms.
+- Per-channel history paginated 50-at-a-time.
+- "Live" pill in the channel header shows when the realtime subscription is active.
+
+## Production-grade primitives
+
+Four engineering primitives the [engineering-agents blog](/release-notes/v0-1-8) post promised. All shipped in this release.
+
+### Prompt caching across all 4 LLM call paths
+
+Anthropic's `cache_control: { type: 'ephemeral' }` (5-minute and 1-hour TTL) wired into Studio Run, Cmd+K, Composer, and Tab autocomplete. Two breakpoints per the official guidance: tool catalog + system/skills bundle.
+
+- Cached tokens bill at 10% of input cost; cache writes cost 25% more on first call. Net: ~90% cost reduction on the static prefix once warm.
+- OpenAI's automatic prefix caching: surfaced via `usage.prompt_tokens_details.cached_tokens` in the Studio result card meta (`cached: NNN`).
+- Gemini explicit `CachedContent` resource creation deferred to v0.1.9 — for now we log a deferred-note line on every Gemini call and read back any caller-managed `cachedContentTokenCount`.
+
+Verifiable in DevTools: open Network tab on a Studio run, inspect the request body, see `cache_control: { type: 'ephemeral' }` markers on the last block of `system` and `tools`.
+
+### Instruction-data channel separation
+
+Every untrusted content boundary now wraps payloads in `<untrusted-data source="...">` tags + a system-prompt `SECURITY:` header instructing the model to treat the wrapped content as data, not commands.
+
+- Composer's `read_file` / `list_files` tool results are wrapped per file. Cmd+K wraps editor selection. exec-agents and Studio system-prompt construction get the header automatically.
+- Tag-injection attacks neutralized: an attacker pasting `</untrusted-data>` inside a file gets their close-tag rewritten to use a U+2010 unicode hyphen, so they can't escape the wrapper.
+- Single source of truth: `src/untrusted-data.js`.
+
+### SHA-256 Merkle hash chain over JSONL recorder
+
+Every agent-run JSONL event now carries `_h` (current hash) and `_p` (prev hash), chained with a `codenow-v1` domain separator. After `run.end`, the head hash is appended to a side file `<slug>/heads.jsonl` for offline anchoring.
+
+- `runs.js getRun()` calls `verifyChain` and returns `integrity: { status, head, brokenAt? }`.
+- The Studio Runs sub-tab shows a `✓ chain verified` pill (with truncated head hash + copy button) on every run; `✗ chain broken at event N` if tampered; neutral `legacy` for pre-v0.1.8 runs.
+- Cross-language: the Python recorder (`RECORDER_PY_SRC`) and TS recorder (`RECORDER_TS_SRC`) emit byte-identical hashes for the same event sequence.
+
+Verifiable from a shell: `node -e 'const {verifyChain}=require("./src/recorder-hash"); …'` on any `.jsonl` returns `{ ok: true, head: 'fb2e25a2…' }`.
+
+### Cisco DefenseClaw runtime — Phase 2
+
+[Phase 1 shipped in v0.1.7](/release-notes/v0-1-7) with the Business-mode Guardrails CLI wrapper. v0.1.8 adds runtime enforcement.
+
+- **Auto-spawn** the Go `defenseclaw-gateway` sidecar on app boot when the CLI is installed AND any project has a policy file. Tear-down on `app.before-quit`. Port configurable via `~/.codenow/settings.json` `defenseclawGatewayPort` (default 8787).
+- **Pre/post hooks** wrapped around 3 call paths: `exec-agents.invokeAgent` (local invoker preflight prompt + postflight model output), `studio.runPrompt` (input + output), `composer-runner.run` (preflight every tool call before fs ops; blocked calls become tool-error results so the model can adapt).
+- **Fail-open by default** — missing/down gateway never blocks an agent. Set `defenseclawFailMode: 'closed'` in settings to opt in to fail-closed.
+- **Topbar pill** `Guardrail Proxy: live/idle` polls `/healthz` every 30s. Hidden when CLI is absent.
+- Block toasts surface stage + reason; policy-file path copies to clipboard.
+
+## Onboarding + UX fixes (May-3 user feedback)
+
+### First-run prerequisites checklist
+
+A user reported: "Installing fresh, it's not obvious that we need claude / codex / gemini CLI installed (or API key) as a prerequisite."
+
+The welcome screen now auto-shows a 3-card prereqs panel when no provider is ready. Each card surfaces:
+
+- Status pill: `Ready` / `CLI installed · sign in or add key` / `Not installed`
+- Install command with a one-click Copy button
+- "Add API key" → opens Manage Keys modal
+- "Get a key →" link with utm_source for attribution
+
+Auto-dismisses when any provider becomes ready. "Skip for now" persists via `settings.prereqsDismissed`.
+
+### In-app update banner
+
+A user reported: "Developers keep the IDE open for many days; we need an in-app prompt when a new version is available with a quick update button."
+
+The bottom-right toast was easy to miss. v0.1.8 ships a prominent top-of-window banner with three live states:
+
+- **Downloading** → `Downloading CodeNow vX.Y.Z…` while the auto-updater fetches.
+- **Progress** → live percent updates from the `download-progress` event.
+- **Ready** → `A new version is ready` + green **Restart and update** button + Later (dismisses for that version only).
+
+New `Check for Updates` entry in Cmd+Shift+P for manual checks. The auto-updater itself polls on boot + every 4 hours.
+
+## Bug fixes
+
+- **Wiki search broken on wiki.codenow.pro** — Nextra 4 ships search via Pagefind but the wiki had no postbuild step to generate the index. Search box was throwing `TypeError: Failed to fetch dynamically imported module: /_pagefind/pagefind.js`. Fixed: added Pagefind devDep + postbuild script. Vercel's default pipeline now generates the index on every deploy. 19 pages / 1899 words indexed.
+- **Welcome screen bled through editor text** — `#welcome` overlay was `position: absolute; inset: 0` with no `background`. When the user toggled welcome back ON via Cmd+Shift+P → Toggle Welcome Screen with a file open, Monaco's text rendered underneath the welcome content. Fixed: added `background: var(--bg)`.
+- **Distribution admin tab — angle column miscategorized + link column empty** — sequel-blog drafts had the `manifesto` tag (legacy taxonomy); link column rendered `—` because `posted_url` was null. Fixed: re-classified to `tech-depth` / `cursor-limitations` / `CN-IDE launch`; backfilled `posted_url` so every row has an `open ↗` link.
+- **Distribution admin — accidental Mark-live** — single Cancel on the URL prompt still flipped status to `live` with no URL. Fixed: two-step guard (Cancel aborts; explicit confirm before PATCH).
+- **`Manage keys` opened the MCP tab** — fixed in v0.1.7, ships in v0.1.8 binary. Now opens a real BYOK modal for Anthropic / OpenAI / Google.
+- **Dev → Business agent handoff broken** — fixed in v0.1.7, ships in v0.1.8 binary. Import Agent wizard's "From this workspace" source type now lists local agent manifests and dispatches via `studio.runPrompt`.
+- **CLI auth detection** — fixed in v0.1.7, ships in v0.1.8 binary. CodeNow now probes `~/.codex / ~/.gemini / ~/.claude` (+ macOS keychain) and surfaces "Signed in via CLI" instead of "no key".
+- **Topbar version pill** — fixed in v0.1.7, ships in v0.1.8 binary. Every window now shows the build version; click to file feedback.
+
+## Smoke
+
+| Stage | Result |
+|---|---|
+| `npm run smoke:static` | 0 errors / 0 warnings / 54 info |
+| `npm run smoke:runtime` | 63 / 64 ✓ (1 known fixture-timing flake on the v0.1.7 Git pane in headless Playwright; feature works in real use) |
+| `npm run smoke:e2e:dev-business` | 10 / 10 ✓ — full beta-user dev→business flow |
+
+## Comparison table on codenow.pro
+
+The [comparison chart](https://codenow.pro/#compare) now reflects v0.1.8:
+
+- **Real-time CRDT collab**: CodeNow ✓ · Cursor ✗ · Windsurf ✗ · Zed ✓ · VS Code (Live Share)
+- **Voice pair**: CodeNow ✓ · Cursor ✗ · Windsurf ✗ · Zed ✓ · VS Code (Live Share)
+- **Vim mode**: CodeNow ✓ · Cursor (extension) · Windsurf (extension) · Zed (native) · VS Code (extension)
+- **Team channels**: CodeNow ✓ · Cursor ✗ · Windsurf ✗ · Zed ✓ · VS Code ✗
+- **Native Rust 120fps**: only Zed. Out of scope for v0.x; revisit when DAU > 10k.
+
+## Known gaps shipping in v0.1.9 / v0.2.0+
+
+- **Embeddings codebase indexer.** v0.1.7's "Ask the repo" panel uses lexical TF×IDF. v0.1.9 swaps to semantic embeddings (`text-embedding-3-small` or BGE-base) cached at `<project>/.codenow/codebase-index/embeddings.bin`.
+- **Multi-suggestion Tab autocomplete.** Cursor-style accept-fragment behavior, prefix-aware ranking.
+- **Multi-file Apply.** Currently single-file; v0.1.9 extends to a Composer-like preview-all-files-then-apply flow.
+- **Stripe billing + tier enforcement.** Pricing page advertises tiers; the desktop app doesn't yet enforce them.
+- **DefenseClaw scaffold-time `defenseclaw.yaml`.** Phase 2 runtime hooks shipped in v0.1.8; the agent-kit scaffolders writing per-agent policies on agent creation lands in v0.1.9.
+- **CRDT v2 with y-websocket relay.** Mid-session join sync. v0.2.0.
+- **TURN server for WebRTC voice.** Symmetric-NAT users. v0.2.2.
+- **Real Cloudflare Turnstile keys.** Currently using the always-pass test value.
+- **Mac signing in CI.** Apple env vars in GH secrets so release builds don't require the founder's machine.
