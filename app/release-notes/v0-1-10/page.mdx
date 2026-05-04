@@ -1,0 +1,113 @@
+---
+title: v0.1.10 — Beta-user trust cycle
+---
+
+# v0.1.10 — Connections, sign-in UX, voice via integrations, promises-driven E2E
+
+**Released 2026-05-04.** A beta-user trust cycle. Five user-reported bugs fixed, login UX upgraded, the voice MVP pulled in favor of Slack / Discord / Zoom integrations, a universal stale-session UX, and a smoke rig rewrite that derives its test cases from every feature CodeNow promises on the homepage and in this wiki.
+
+If you're already on v0.1.9, the in-app update banner will pull this in on next launch. Manual install at [codenow.pro/download/mac](https://codenow.pro/download/mac).
+
+## Voice collaboration → Slack / Discord / Zoom integrations
+
+The v0.1.8 WebRTC voice MVP (direct-peer, STUN-only) was unreliable in production. About 30% of users sit behind symmetric NAT and need a TURN relay; macOS mic-permission edge cases dropped joins silently; and the topbar "Join voice" button became a credibility hit when it didn't work.
+
+In v0.1.10, voice is **pulled from the topbar and the homepage**. The replacement story: connect **Slack**, **Discord**, or **Zoom** via the MCP connection catalog (already shipping in CodeNow as one-click vendor entries) and start a huddle / call there. Same end result — voice between teammates while pair-programming — without us re-implementing what those tools do better.
+
+What changed in the binary:
+
+- Topbar **Join voice** pill removed.
+- `voice:signaling-config` IPC + preload bridge removed.
+- `src/renderer/voice.js` runtime stays on disk (not loaded) so a future v0.2.x re-scope can revive cleanly without losing the work.
+- Homepage comparison table now reads "Voice / video pair-programming → **Via Slack / Discord / Zoom integration**".
+- New smoke case `voice.deferred-to-integrations` asserts the pill is gone, the IPC is gone, and Slack stays in the connection catalog so the documented workaround actually works.
+
+If we re-introduce voice, it'll be in v0.2.x with a TURN relay and a real reliability story — not before.
+
+## Login screen UX
+
+Two beta-user-reported gaps closed:
+
+- **Show/hide password eye toggle** on both Sign Up and Login. Click 👁 → the password becomes plaintext (icon flips to 🙈); click again to hide. Standard browser auth UX.
+- **"Remember my email on this device"** checkbox (default on, unchecked is a one-shot login). On a successful sign-in we persist only the email in `localStorage` — never the password. On next launch the email pre-fills and the form auto-flips to Login (no more landing on Sign Up by default for returning users).
+- `autocomplete="username"`, `autocomplete="current-password"`, `autocomplete="new-password"` attributes wired so 1Password / Bitwarden / iCloud Keychain offer the right credentials.
+
+## Connections panel shows the full vetted catalog
+
+Direct user feedback: *"Connections (3rd tab on left) was supposed to show 39 MCP servers — I see only 2. Why is this all so flaky and hallucinated?"*
+
+The catalog (52 vetted MCPs across hosted, docs-only, local, and CLI categories — Atlassian, HubSpot, Salesforce, Asana, Box, Cloudflare, Datadog, Snowflake, ServiceNow, Zoom, Shopify, Slack, Gmail, Linear, Notion, Vercel, Stripe, Figma, GitHub, npm, gcloud, and more) was being silently filtered down to whatever subset the active project's `connections` allowlist contained. Karl's CodeNow project had `["github", "npm"]` — so 50 of 52 entries were invisible without any UI hint that filtering was happening.
+
+**Fix:** the `get-connections` IPC now returns the full BUILT_IN_CONNECTIONS list unconditionally. Per-project scoping was never surfaced as a feature anyway. The smoke rig now pins this with `catalog.connections-shows-all-vetted-mcps` (asserts ≥45 entries) so the regression can't recur.
+
+## + Invite team button promoted to the topbar
+
+Was buried in the bottom statusbar as the label "Members" where users couldn't find it. Now sits left of the user-name pill in the topbar with the obvious affordance label `+ Invite team`. Statusbar Members button removed (Share stays — it's a different flow).
+
+## Stale-session banner — universal "asking to login when I'm logged in" fix
+
+Direct user complaint: *"Most of the toggle buttons keep asking me to login when I am already logged in."*
+
+**Root cause:** `~/.codenow/auth.json` carries the user's email + first name + plan + trial state, so the topbar avatar pill correctly shows you as signed in. But the actual Bearer access token lives in the OS keychain (Apple Keychain on macOS, Credential Manager on Windows, libsecret on Linux), and on legacy installs (pre-keychain-migration) the token field can be missing. Every server-bound feature — Voice signaling, + Invite team, Share project, live CRDT collab, Agent21 publish — fails with "Sign in to CodeNow first" while the IDE simultaneously displays you as logged in.
+
+Six call sites had this same bug (`voice:signaling-config`, `team:*`, `auth:get-realtime-config` for CRDT, `collab-*` for share/projects, plus the in-renderer CRDT toast). Patching each one would have been fragile.
+
+**Fix:** one universal amber banner at the top of the IDE, surfaced when the new `auth:has-keychain-token` IPC reports the keychain has no token but `auth.json` exists:
+
+> Your sign-in needs a refresh — features that talk to the cloud (**Voice**, **+ Invite team**, **Share**, **live collab**, **Agent21 publish**) will fail until you sign in again. **[Sign in again]** [×]
+
+Click "Sign in again" → routes to the auth screen → after one re-sign-in your keychain is populated → every server-bound feature works permanently and the banner stops appearing. Local features (Files / Editor / Terminal / Format / Theme / Migrate / Knowledge / Vim / Autonomy / Card-Code toggle) keep working without re-auth, and the banner is dismissable for the session.
+
+If a user dismisses the banner and clicks Members or Share anyway, those modals now render the same "Your session needs a refresh — [Sign in again]" block instead of dumping a dead toast.
+
+## Voice pill diagnostic instrumentation
+
+Direct user complaint: *"I see the 'Join voice' button on top right of the IDE but it does not do anything when I click."*
+
+The click handler now logs a structured diagnostic to the DevTools console on every click — `[voice] click {voiceMVP, activeProject, state, hasSupabase, hasBridge}` — and surfaces a SPECIFIC toast for each failure mode (`Microphone unavailable`, `Voice signaling library failed to load`, `Voice config IPC failed`, `Session expired — sign in again to use voice`, `Already connecting…`, etc.) rather than the old generic silent-failure path. If voice still fails to connect for you after v0.1.10, the toast text + console line tell us exactly which branch is blocking.
+
+## Smoke rig rewrite — promises-driven E2E
+
+The smoke rig used to assert wiring (*"this preload bridge exists, this modal can open"*) without asserting that user-promised features actually worked. That's how shipping a "45+ MCP catalog" claim with only 2 visible entries got past CI.
+
+v0.1.10 introduces a **promise ledger** — every feature claimed on `codenow.pro` (homepage / pricing tiers / `/trust` / `/executive`) and on this wiki (home / get-started / ui-map / concepts / connect / release-notes/v0-1-9) is enumerated in `tools/smoke/promises.mjs`. Each entry either points at a runtime test case OR carries an `untestable: <reason>` justification (cross-platform packaging, OS keychain, Stripe gating that hasn't shipped yet, etc.).
+
+A meta-case `coverage.public-promises-have-tests` fails CI if any promise has no test, or if a `caseRef` points at a case that no longer exists (drift detection). Today's coverage:
+
+| Metric | Value |
+|---|---|
+| Total promises tracked | 89 |
+| Covered by passing test | 82 |
+| Gaps (no test wired) | **0** |
+| Untestable (with reason) | 7 |
+| Dangling (typo in caseRef) | 0 |
+
+The 7 untestable rows: 2 pricing tiers (gating queued for v0.1.11), 3 platform packages (signed installers tested in `release.yml`, not the smoke rig), OS keychain `safeStorage` (no real keychain in CI Linux runners), enterprise SSO (roadmap copy, no in-app gate yet).
+
+Eleven new targeted runtime cases ship alongside the ledger:
+
+- `sidebar.files-tree-renders` — file tree populates from active project
+- `sidebar.extensions-renders-curated-list` — ≥10 curated extensions
+- `harnesses.all-promised-kits-available` — Claude Agent SDK (TS + Py), Cursor SDK, Microsoft Agent Framework, Google ADK, empty all `available: true`
+- `agents.studio-runs-tab-activates` (Trace pane)
+- `agents.studio-evals-tab-activates`
+- `agents.studio-prompts-tab-activates`
+- `agents.studio-publish-tab-activates`
+- `replay.runs-bridge-and-fork-exposed` — preload bridges for runsList + fork-to-current-code
+- `catalog.named-vendors-present` — Slack, GitHub, Jira/Atlassian appear by name
+- `business.five-panels-activate` — Catalog, Skillify, Guardrails, Workforce, Output all render with content
+- `auth.stale-session-banner-shows` — banner appears when keychain is empty
+- `auth.session-expired-shows-actionable-block` — Members modal renders re-auth block instead of dead error
+- `topbar.invite-team-button-functional` — new button is in topbar and opens modal
+
+Plus two **generic dead-click sweeps** that enumerate every button by id in the topbar and the bottom statusbar, click each, and fail if it produces no DOM/toast/state change. This is the test that would have caught Members / Share / Voice on day one.
+
+## Smoke runner hardening
+
+The smoke runner now passes `--user-data-dir=<fixture-path>` to Electron so the rig doesn't silently exit-0 when the production CodeNow.app is open on the developer's machine (the symptom was an empty smoke report with no error, caused by `app.requestSingleInstanceLock()` returning false for a same-named running app).
+
+## Numbers
+
+- **Smoke:** static 0 errors / 0 warnings / 44 info; runtime 85/86 (1 known fixture timing flake on git pane in headless Playwright; feature works in real session).
+- **Promise coverage:** 82/89 (92.1%), 0 gaps.
+- **Files touched:** 5 in `src/` (one DMG re-cert covers everything), 4 in `tools/smoke/`, 1 new `tools/smoke/promises.mjs`.
