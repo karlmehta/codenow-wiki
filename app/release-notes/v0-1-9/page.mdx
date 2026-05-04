@@ -1,0 +1,117 @@
+---
+title: v0.1.9 — Threads + autonomy + embeddings
+---
+
+# v0.1.9 — Threads, autonomy, embeddings
+
+**Released 2026-05-03.** Same-day cut as v0.1.8 — direct user feedback drove the priorities. Five anchor features + a per-project Autonomy toggle that closes a long-running DevOps complaint + a UI bug sweep on the topbar/footer.
+
+If you're already on v0.1.7 or v0.1.8, the in-app banner will pull this in on next launch. Manual install at [codenow.pro/download](https://codenow.pro/download/mac).
+
+## Threads sidebar — full Zed parity
+
+The headline. Direct user quote: *"This is the key feature for developers — separate thread/context for each new task, this way credits are optimally utilized."*
+
+- New **Threads** sub-tab in the Agents panel, alongside Run / Test / Trace.
+- Left rail: list of named threads, most-recent first, each with model badge + turn count.
+- Right pane: active thread chat — messages, composer, model picker, autonomy indicator.
+- **+ New thread** in the rail toolbar. **Cmd+N** when the Threads tab is active.
+- Auto-named from the first user message (60-char ellipsis).
+- Per-thread **rename / archive / delete** on hover.
+- Cumulative cost + token totals shown at the top of each active thread; per-turn cost on hover.
+
+**Why this compounds with v0.1.8's prompt caching:** each thread caches its own static prefix (system + tool catalog) via `cache_control: ephemeral`. Every turn after the first hits the cache — typically a 90% cost reduction on the prefix. Switching threads switches which prefix is being cached, so two parallel "Add /api/health endpoint" and "Refactor billing webhook" threads don't pollute each other's contexts.
+
+**Persistence + audit:**
+- Stored at `<project>/.codenow/threads/{threadId}.jsonl`.
+- **SHA-256 Merkle hash chain** over every turn (the same `_h`/`_p` chain v0.1.8 introduced for the JSONL recorder). Audit-verifiable that no message was tampered with.
+- `lastActiveThreadId` persists per project — relaunching drops you back into the thread you left.
+
+`studio.runPrompt` extended to accept an optional `messages[]` array (previously it took a single `prompt` string). Anthropic, OpenAI, Google all route the multi-turn history. The single-prompt path is unchanged for the Run pane and Composer.
+
+## Per-project Autonomy toggle
+
+Closes the most-cited recent complaint: *"Codex keeps asking to confirm every command, can't run a 30-40 min hands-free DevOps task. Same task in Windsurf is silent."*
+
+Tri-state per project: **Confirm** (default — every shell command asks), **Safe** (auto-approve safe ops, prompt on failure), **Full** (no prompts at all). Topbar segmented control next to the Vim pill. Persisted at `<project>/.codenow/autonomy.json` with `changedAt` and `changedBy` for audit.
+
+| CLI | Safe | Full |
+|---|---|---|
+| Claude Code | `--permission-mode acceptEdits` | `--dangerously-skip-permissions` |
+| Codex | `--ask-for-approval=on-failure` | `--full-auto` |
+| Gemini | `--auto-approve` | `--auto-approve` |
+| Aider | `--yes-always` | `--yes-always` |
+
+`terminal-start-ai` and `terminal-start-claude` append the right flags before the launch line. **Full** mode shows a persistent red top banner ("Autonomy: FULL — agent runs commands without asking") that nags on every IDE boot until disabled. Explicit confirm dialog before entering Full.
+
+## Embeddings codebase indexer
+
+The lexical TF×IDF "Ask the repo" panel from v0.1.7 sometimes missed paraphrases. v0.1.9 swaps the retrieval backbone to semantic embeddings.
+
+- **OpenAI `text-embedding-3-small`** (1536-dim) when you have an OpenAI key. ~$0.02/M tokens.
+- **Google `text-embedding-004`** (768-dim) when only Google is set. Free tier covers most projects.
+- **Lexical fall-through** when neither key is available — same TF×IDF as v0.1.7 keeps working.
+- Packed binary index at `<project>/.codenow/codebase-index/embeddings.bin` + `chunks.json` sidecar.
+- Mtime-aware — only re-embeds files that changed since the last build.
+
+**Cost-confirm modal** before kicking off the build. Real number, real money, real disclosure: *"This is real money charged to your OpenAI account."*
+
+The Ask panel's toolbar now has an engine dropdown — Lexical, Embeddings (3-small), Embeddings (004) — and a "Rebuild embeddings index" button. Each result row tags which engine produced it.
+
+## Tab autocomplete v2 — multi-suggestion + partial-accept
+
+The v0.1.7 Tab autocomplete was single-suggestion. v0.1.9 adopts the Cursor pattern.
+
+- **3 candidates per request.** Three parallel Haiku 4.5 calls at temperatures 0.0 / 0.4 / 0.8, deduplicated. Total cost: still pennies.
+- **Alt+]** / **Alt+[** cycles between candidates. Tab accepts the visible one.
+- **Cmd+→** (Ctrl+→) accepts only the next word/token boundary.
+- **Cmd+Down** accepts only the first line.
+- **Prefix-aware re-rank:** as you type, candidates whose prefix no longer matches what you've typed get filtered out *locally*. No fresh fetch unless none of the 3 candidates survive.
+
+Cost guards from v0.1.7 stay: file < 2000 lines, window < 8000 chars, 600ms idle debounce, fail-soft on no-key. Topbar pill now reads `Tab AI · streamed · 3 candidates` when active.
+
+## DefenseClaw scaffold-time policy
+
+Closes the last open DefenseClaw integration item. v0.1.7 shipped the CLI wrapper, v0.1.8 shipped the runtime gateway hooks, v0.1.9 shipped the auto-policy.
+
+Every scaffolded agent now writes a `defenseclaw.yaml` at the agent root with sensible defaults:
+
+- **skills_scanner**: enabled
+- **mcp_scanner**: enabled, allow-list mode
+- **codeguard**: enabled (secrets, unsafe deserialization, weak crypto, injection patterns)
+- **guardrail proxy**: `mode: observe` (log, don't block — opt into `mode: action` later)
+- **network egress**: empty allowlist (forces explicit declaration)
+
+Header comment in every generated policy explains each section. Idempotent — never overwrites a hand-edited policy.
+
+The Anatomy card shows a **DefenseClaw** tile with three states:
+
+- Green ✓ — Policy active (mode: observe / action)
+- Yellow ⚠ — No policy (legacy agents from before v0.1.9)
+- Red ✗ — Policy file present but `mode: off`
+
+Click the tile → opens `defenseclaw.yaml` in Monaco.
+
+## Bug sweep — footer + topbar
+
+User-reported red-arrow screenshot pointed at five issues; all fixed:
+
+- **Footer overflow on long paths.** Project-relative path + ellipsis + tooltip with the absolute path.
+- **Missing git branch.** New `⎇ <branch>` chip in the footer.
+- **"Where is the Models menu?"** The toast is now clickable — clicking opens the BYOK modal directly.
+- **Sign Out + name in awkward bottom-right.** Moved to a topbar avatar pill. Click → dropdown with email, trial countdown, Manage AI keys, Check for updates, Sign out.
+- **First name only** shown in the topbar pill; full name + email in the dropdown.
+
+## Smoke
+
+| Stage | Result |
+|---|---|
+| `npm run smoke:static` | 0 errors / 0 warnings / 44 info |
+| `npm run smoke:runtime` | 68 / 69 ✓ (1 pre-existing git-pane fixture flake from v0.1.7) |
+
+## What slipped to v0.1.10
+
+- **Multi-file Apply.** The build agent disconnected mid-run; deferred to v0.1.10.
+- **Stripe billing + tier enforcement.** Owner-anchored v0.1.10.
+- **Real Cloudflare Turnstile keys.**
+- **Mac signing in CI.**
