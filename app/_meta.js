@@ -5,6 +5,7 @@ export default {
     display: 'hidden',
   },
   'get-started': 'Get Started',
+  requirements: 'Requirements',
   concepts: 'Concepts',
   tutorials: 'Build',
   connect: 'Connect',

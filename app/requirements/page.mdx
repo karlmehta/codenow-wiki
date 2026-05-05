@@ -1,0 +1,114 @@
+---
+title: Requirements & prerequisites
+---
+
+# Before you install CodeNow
+
+CodeNow is a **bring-your-own-key** IDE — you sign in once, then connect the AI providers you already pay for. There is no first-party LLM bill from CodeNow itself. This page lists the upstream services CodeNow can integrate with, what each one requires, and which ones cost money.
+
+## Operating system
+
+- **macOS Apple Silicon (M1+)** — first-class. Signed + notarized DMG.
+- **Windows 10/11 (x64)** — supported via CI builds; manual install.
+- **Linux (x86_64)** — AppImage from CI builds.
+- **macOS Intel** — temporarily off the CI matrix; manual builds work.
+
+## AI providers
+
+CodeNow runs side-by-side multi-model: Claude · Codex · Gemini · Aider · Copilot. **You configure which ones you want.** None of them are required — you can use the IDE with zero AI integrations and it still gives you Monaco editor, file tree, terminal, Git GUI, and team collaboration.
+
+### Claude Code
+
+> **Requires a Claude Pro or Claude Max subscription.** The free `claude.ai` tier does not work with the Claude Code CLI.
+
+1. Install the CLI: `curl -fsSL claude.ai/install.sh | sh` (or `brew install anthropic/tap/claude`).
+2. Run `claude` once in a terminal — it'll open a browser to sign in.
+3. In CodeNow, the **Claude Code** tab in the bottom panel will pick up the CLI automatically.
+
+If you only have a free Claude account, the CLI will sign in but every command will be blocked by `claude_pro_required`. Upgrade at [claude.ai/upgrade](https://claude.ai/upgrade) before relying on this kit.
+
+### Claude Agent SDK (TypeScript / Python)
+
+The default kit when you click **+ Build new agent**. **Requires an Anthropic API key**, which is separate from your Claude Pro subscription. Get one at [console.anthropic.com](https://console.anthropic.com/) — pricing is pay-as-you-go (no monthly fee). Add to `~/.codenow/.env.local`:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+> If you don't have an Anthropic API key yet, pick a different kit when scaffolding (see below).
+
+### Google ADK (Python)
+
+Free tier available, but quotas are tight. **Limits at the time of writing (subject to change):**
+
+- Gemini Flash free tier: ~10 requests/minute, ~1500 requests/day
+- Gemini Pro free tier: ~2 requests/minute, ~50 requests/day
+
+For real workloads, enable billing at [aistudio.google.com](https://aistudio.google.com/apikey) — pay-as-you-go pricing. Set:
+
+```
+GOOGLE_API_KEY=...
+```
+
+Or use Vertex AI instead: `GOOGLE_GENAI_USE_VERTEXAI=TRUE` + `GOOGLE_CLOUD_PROJECT=your-project`.
+
+### Microsoft Agent Framework (Python)
+
+Requires Azure OpenAI access (`AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT`) or an OpenAI API key (`OPENAI_API_KEY`). Pay-as-you-go.
+
+### Cursor SDK (TypeScript)
+
+Cursor's agent harness with Composer 2 + multi-model + sandboxed cloud VMs. Requires a Cursor account and API key from [cursor.com/integrations](https://www.cursor.com/integrations).
+
+### Empty manifest only
+
+No SDK, no runtime — just an Agent21 manifest file. Use this if you're wiring up your own agent server and only need CodeNow for publishing to the marketplace.
+
+### Which kit should I pick?
+
+| You have | Recommended kit |
+|---|---|
+| Anthropic API key | Claude Agent SDK (TypeScript or Python) |
+| OpenAI / Azure OpenAI | Microsoft Agent Framework (Python) |
+| Google AI Studio key | Google ADK (Python) — watch the free-tier quotas |
+| Cursor account | Cursor SDK (TypeScript) |
+| Just a Claude Pro subscription, no API access | Use the **Claude Code** terminal tab instead of scaffolding an SDK agent |
+| None of the above | Sign up for a free Anthropic account → add $5 credit → use Claude Agent SDK |
+
+## Agent21 marketplace publishing
+
+Publishing your built agent to Agent21 (one-click monetize) requires an `AGENT21_CLIENT_SECRET`. To get one:
+
+1. Sign up at [agent21.dev](https://agent21.dev) (when public; private beta as of v0.1.14)
+2. Go to Account → API access → Create client credentials
+3. Add to `~/.codenow/.env.local`:
+   ```
+   AGENT21_CLIENT_SECRET=...
+   ```
+4. Relaunch CodeNow
+
+If you're not publishing to a marketplace yet, you can skip this entirely — agent scaffolding, running, testing, and the Live Replay all work without an Agent21 account.
+
+## CLI tools (optional but recommended)
+
+CodeNow's embedded terminal prepends `~/.local/bin`, `/opt/homebrew/bin`, and `/usr/local/bin` to your PATH so these work out of the box if installed:
+
+| Tool | Why |
+|---|---|
+| `gh` (GitHub CLI) | Git pane integration, PR creation |
+| `claude` (Claude Code) | Bottom-panel Claude Code tab |
+| `codex` (OpenAI Codex CLI) | Codex tab |
+| `aider` | Aider tab |
+| `gemini` (Google Gemini CLI) | Gemini tab |
+| `vercel` | Deploy from terminal |
+| `node` 20+ | TypeScript agent kits, MCP servers |
+| `python` 3.11+ | Python agent kits |
+
+The first-launch **Migration Assistant** scans for these and offers one-click import of the configs already on your machine — so if you've used Cursor or VS Code before, your `gitconfig`, SSH keys, GitHub auth, and AI provider keys carry over.
+
+## Known free-tier gotchas
+
+- **Claude free `claude.ai` account ≠ Claude Pro for the CLI.** The CLI will sign in but every command returns "Claude Pro or Max required". Confusing for first-time users — upgrade or use a different kit.
+- **Google AI Studio free quota** burns through fast on agent loops — turn on billing for anything past a demo.
+- **OpenAI free tier** doesn't cover GPT-4 class models. You need a paid OpenAI account for Codex CLI to be useful.
+- **Anthropic Console** new accounts get a small free credit (~$5) — enough to try the Claude Agent SDK before deciding to pay.
