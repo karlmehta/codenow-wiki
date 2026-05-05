@@ -98,10 +98,54 @@ The app menu now has the menus every other IDE has:
 - **Bottom panel hidden on boot** by default; the pty is spawned lazily on first focus, not on app start. No more "empty terminal staring at you with nothing in it".
 - **Live collab pill hidden when you're alone.** Was confusing — looked like someone else might be editing your code. Pill only appears when peerCount ≥ 1.
 
-## Site + docs
+## Welcome screen + IDE chrome
+
+- **+ Create New Project** button on the welcome screen alongside the existing Open Project Folder. Creates a fresh directory under `~/Documents` (configurable) and adds it as a project — no need to drop out to Finder first.
+- **Help & Wiki sidebar button** at the bottom of the left sidebar — 1-click opens `wiki.codenow.pro` in your default browser.
+- **Report bug** item in the user-pill menu — opens a structured GitHub issue template at `codenow-wiki/issues/new` so beta feedback lands with the right environment fields pre-filled.
+- **Bottom status bar consolidation** — Format · Format on save · Autofix on save now live behind a `⚙ Editor` popover so the bar isn't a wall of toggles. Theme · Knowledge · Migrate · Share · Members stay visible.
+- **IDLE pill fix** — the debugger-state badge that read "IDLE" next to the Debug tab was missing a CSS hidden rule, so it was always visible. Now correctly hides when the debugger is idle and shows a colored RUNNING / STOPPED badge during active sessions.
+- **DevTools always dock to bottom.** `Cmd+Opt+I` now opens the inspector docked beneath the editor (was floating detached or right-side, depending on your last session). Easier IDE-on-IDE debugging.
+
+## Slack first-class
+
+The voice MVP was pulled in v0.1.10 in favor of "use Slack for huddles." v0.1.15 makes that promise real:
+
+- **Auto-detect Slack desktop app** on macOS (`/Applications/Slack.app` + `mdfind` fallback), Windows (`%LOCALAPPDATA%/slack/slack.exe`), Linux (`/snap/bin/slack`, `/usr/bin/slack`). Detection is cached per session.
+- **First-launch suggestion banner** (one-time, dismissible): "Slack detected — connect for 1-click team handoff?"
+- **Topbar Slack pill** showing the connected workspace name. Click opens Slack workspace home.
+- **Connect Slack workspace** flow — paste workspace ID + optional default channel + optional user token. Token goes through `safeStorage` (never plaintext in settings.json).
+- **1-click Open in Slack** button (Slack's official 4-square SVG mark) next to every CodeNow channel in the Members modal. When mapped to a Slack channel, opens `slack://channel?team=…&id=…` in your local Slack app. When unmapped, prompts to set up a mapping.
+- **Channel mapping** — `settings.slackChannelMap` persists per-channel mappings between CodeNow channels and Slack channels. The CodeNow channels and Slack channels are *separate platforms* with separate identities; the map creates a 1-click jump for handoffs.
+- **"Send to Slack" on agent run output** — posts a summary to the configured default channel via Slack Web API (when a token is configured) or falls back to a deep link with the summary copied to your clipboard.
+
+Server-side `/codenow` slash commands + bidirectional channel sync are queued for v0.1.16.
+
+## Wiki support docs
 
 - New `/wiki/requirements` page documents Pro/Max subscription requirements, Google ADK quota gotchas, and the kit→key matrix.
+- New "CodeNow channels vs. Slack channels" section explains the difference between project-scoped CodeNow chat (Supabase Realtime) and your Slack workspace channels.
+- "Report issue ↗" link in the wiki Navbar + Footer.
+- `.github/ISSUE_TEMPLATE/{bug_report,feature_request}.md` so users hit a structured form rather than a blank issue.
 - Homepage version prose bumped to v0.1.15.
+
+## Editor visual polish
+
+- **Modal padding pass.** Migration Assistant / Build New Agent / Manifest Editor all gained breathing room — `.modal-content` padding 0 → 24px / 28px sides, `.iw-section` gaps + section-to-section margins bumped, modal headers gain bottom-borders, modal buttons have a `min-height: 32px` minimum.
+- **Emojis → SVG icons.** Section icons in the Migration Assistant and a few static markup spots (Claude lead-gen card, multi-apply toolbar) are now Lucide-style 16×16 strokes instead of emoji characters. Status indicators (✓, ✗, ▸, ▾) intentionally remain — they're functional, not decoration.
+- **Manifest fields autofill.** `Built By` now pre-fills from your CodeNow profile (`firstName + lastName` from `auth.json`), and version defaults to `0.1.0` when blank. Non-destructive — won't overwrite anything you've already set.
+- **"No tools detected" friendlier copy.** The terse "Add `@tool` decorators…" message is now multi-line help with examples for Python and TypeScript, and a `Learn more →` link to the agent-tools tutorial.
+- **Google ADK quota warning** on the Build New Agent kit card AND post-scaffold: Free tier is ~10 req/min, ~1500/day. Use Vertex AI or enable billing for real workloads.
+
+## Auto-import for React / Next.js / Node
+
+- **Naive auto-import** on save. The previous editor was a notepad — type `useState` and you had to manually add `import { useState } from 'react'`. Now: 47 of the most common identifiers auto-resolve their imports, get inserted at the top of the file (after `'use client' / 'use server'` directives + leading comments), and a status-bar toast tells you what was added.
+- **Coverage:** all 25 React hooks + lifecycle helpers (`useState`, `useEffect`, `useRef`, `useMemo`, `useCallback`, `useContext`, `useReducer`, `useTransition`, `useDeferredValue`, `useId`, `useSyncExternalStore`, `Fragment`, `Suspense`, `lazy`, `memo`, `forwardRef`, `createContext`, …), Next.js navigation/server primitives (`useRouter`, `usePathname`, `redirect`, `notFound`, `NextRequest`, `NextResponse`, `cookies`, `headers`, `revalidatePath`, `revalidateTag`, `unstable_cache`, `Image`, `Link`), Node built-ins (`path`, `fs`, `os`, `crypto`, `child_process` named exports).
+- **Honestly naive.** No project-graph awareness, no re-export resolution, no same-name disambiguation. Skips locally-declared names and already-imported names. The full LSP-driven, project-aware version is queued for v0.1.16.
+
+## Embedded terminal — yellow-warning fix
+
+The persistent **"Native installation exists but ~/.local/bin is not in your PATH"** Claude Code warning that fired every time the embedded terminal opened on a project where the user's `~/.zshrc` hardcoded `PATH` is gone. CodeNow now writes a `~/.codenow/zsh-shim/.zshrc` + `.zprofile` that source the user's real dotfiles and *then* re-prepend `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin` to PATH. The pty spawns with `ZDOTDIR` pointed at the shim. Your real `~/.zshrc` stays untouched.
 
 ## Carried forward from v0.1.14
 
@@ -112,8 +156,15 @@ The app menu now has the menus every other IDE has:
 - Email FROM unified to `no-reply@codenow.pro`
 - Stale-session banner removed
 
-## Known follow-ups
+## Known follow-ups (v0.1.16)
 
-- **Auto-import for hooks** (TS LSP integration) — v0.1.16
-- **Multi-pane terminal** — v0.1.16
-- **Fork-replay path** in `src/main.js` still looks at project root for `agent.py` / `agent.ts`; new slug-subfolder scaffolds will need a path update before fork-replay works on freshly-scaffolded agents.
+- **JIRA first-class integration** — sidebar with My tickets, transitions, comments, "Slack it on close" hook.
+- **"Slack it"** — right-click code selection → send to Slack as a code block via Web API or deep link.
+- **Daily status compiler** — 1-click "Send today's status" that compiles git log + LOC + closed JIRA tickets into a Slack message.
+- **Slack invite Tier B** — full OAuth + `chat.postMessage` for true 1-click invites (today's "Share via Slack" copies the invite to your clipboard so you can paste in Slack).
+- **`/codenow` Slack slash commands + bidirectional channel sync** — server-side Slack app at `codenow.pro/slack/install`.
+- **Auto-import via real TypeScript Language Server** — replaces the naive 47-identifier table-based v0.1.15 implementation with project-aware imports.
+- **Multi-pane terminal** — open a second shell side-by-side instead of cycling through tabs.
+- **Fork-replay path adjustment** — `src/main.js` still looks at project root for `agent.py` / `agent.ts`; needs to also scan `<projectPath>/<slug>/` since v0.1.15 scaffolders write into a slug subfolder.
+- **`detect-agents` IPC** — same root-only assumption as fork-replay; same fix.
+- **In-app Slack channel naming badges** — visual differentiation between CodeNow channels and Slack channels in the Members modal (the wiki Requirements page already explains the distinction).
