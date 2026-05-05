@@ -1,0 +1,55 @@
+---
+title: v0.1.12 — sign-in hotfix (supersedes v0.1.11)
+---
+
+# v0.1.12 — sign-in hotfix + banner-overlay fix
+
+**Released 2026-05-04.** Hotfix release. v0.1.12 is what v0.1.11 should have been — installs the keychain fallback **and** the banner-overlay fix in one DMG.
+
+If you're on v0.1.10 or v0.1.11, **install v0.1.12 manually** (drag-and-drop from [codenow.pro/download/mac](https://codenow.pro/download/mac)). Auto-update on macOS is brittle for hardened-runtime apps; relying on it for this hop has been unreliable in user reports. Once you're on v0.1.12, future auto-updates work normally.
+
+## What broke in v0.1.10
+
+Two compounding bugs surfaced together:
+
+1. **Persistent "Your sign-in needs a refresh" banner** that wouldn't go away even after re-signing in.
+2. **Update banner overlapping the topbar** — when v0.1.11 was offered as an update, the "A new version is ready" notice was painted *over* the project tabs row, hiding the tabs and user pill.
+
+## Root cause — keychain ACL drift
+
+The access token was stored only in the macOS keychain via Electron's `safeStorage`. Two binaries access the same keychain entry: the source-loaded `electron` (during dev) and the signed/notarized `CodeNow.app` (production install). On hardened-runtime signed binaries, `safeStorage.encryptString` succeeds during the sign-in write, but a later `safeStorage.getSecret` call from the same binary returns `null` because the macOS keychain ACL it stamped on the entry doesn't match on re-launch. The keychain has the encrypted blob; the app can't decrypt it.
+
+End result: every server-bound feature (`+ Invite team`, `Share`, live CRDT collab, Agent21 publish, Threads server-run, server-side session validation) called `getSecret('auth:accessToken')`, got `null`, and failed with "Sign in to CodeNow first" — while the avatar pill simultaneously displayed the user as signed in (because `auth.json` still had the email/plan/trial fields).
+
+This bug was **present in every release back to v0.1.6** (when keychain storage was introduced). v0.1.10 was the first release with a stale-session banner that *detected* it — so v0.1.10 wasn't where the bug appeared, it was where the bug became visible.
+
+## Fix — dual-storage with file fallback
+
+The token is now mirrored to `~/.codenow/auth.json` (mode 0600) **in addition to** the OS keychain. A new `getAccessToken()` helper tries keychain first, falls back to the file. All four token consumers were unified to use it:
+
+- `validateAccessToken()` — server-side session validation on boot + every 5 min
+- `auth-check-still-valid` IPC — periodic re-validation
+- `team:*` server API call path — `+ Invite team`, Share, etc.
+- `auth:has-keychain-token` — the IPC the stale-session banner checks
+
+After install, you'll see the banner one final time on first launch (existing `auth.json` doesn't have the inline token field yet). Click **Sign in again** → new `saveSession` writes to **both** locations → banner disappears permanently and all cloud features work.
+
+The file fallback uses `0600` perms so it's no less private than the keychain blob in practice. Encrypted-at-rest is a fair argument for keychain-only on a stolen-laptop threat model — but a token an authenticated process can't decrypt is no more secure than no token at all.
+
+## Banner-overlay fix
+
+`#update-banner` had `position: fixed; top: 0; left: 0; right: 0; z-index: 9700` — designed for prominence, but it floated the banner over the topbar instead of pushing the rest of the UI down. When stacked on top of the stale-session banner, two banners + the project tabs row all rendered at the same y-coordinate.
+
+v0.1.12 introduces a `<div id="banner-slot">` after the topbar/stale/autonomy banners and before `#main`, in the natural flex column flow. The renderer's `renderUpdateBanner()` was already targeting `#banner-slot` (with a fallback to `document.body.appendChild` that was firing in v0.1.10/v0.1.11 since the slot didn't exist). Now the slot exists. Padding and font-size were tightened so an active update banner is a single tidy row, not a full-height intrusion.
+
+## Build provenance
+
+- Code-signed: `Developer ID Application: PREDIXTIONS INC (K9X3X4GQAQ)`
+- Apple notarization submission: `934ea863-d6cd-4996-822c-23d926e0e0a2`
+- `spctl -a -t open --context context:primary-signature -v` → `accepted, source=Notarized Developer ID`
+- Stapled: yes
+- Hardened runtime entitlements: `build/entitlements.mac.plist`
+
+## Carries forward from v0.1.11
+
+v0.1.11 contained only the keychain dual-storage fix — but not the banner-overlay fix, which was sitting uncommitted in working tree at tag time. v0.1.12 supersedes v0.1.11 and ships both. There is no reason to install v0.1.11; install v0.1.12 directly.
