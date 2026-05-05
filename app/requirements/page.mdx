@@ -17,6 +17,21 @@ CodeNow is a **bring-your-own-key** IDE — you sign in once, then connect the A
 
 CodeNow runs side-by-side multi-model: Claude · Codex · Gemini · Aider · Copilot. **You configure which ones you want.** None of them are required — you can use the IDE with zero AI integrations and it still gives you Monaco editor, file tree, terminal, Git GUI, and team collaboration.
 
+## CodeNow channels vs. Slack channels
+
+These are two different things. We get this question on day one of every team install, so it's worth nailing down up front:
+
+- **CodeNow channels** are the project-scoped chat backed by Supabase Realtime. They live in your CodeNow team — same login as your IDE, same membership as the project. Open them from the Members modal or the **Workforce → CodeNow channels** rail in Business mode.
+- **Slack channels** are your Slack workspace's channels — totally separate. They live on Slack's servers, use your Slack identity, and have their own membership.
+
+The Slack integration shipped in v0.1.15 lets you 1-click jump from a CodeNow channel to a mapped Slack channel — useful for handoffs to people who aren't in CodeNow (legal, sales, the ops lead who lives in Slack all day). To set up the jump:
+
+1. Connect a Slack workspace (topbar Slack pill → **Connect Slack workspace**).
+2. In the Members modal, click the small Slack mark next to a CodeNow channel → paste the Slack channel ID.
+3. From then on, that Slack mark opens the mapped Slack channel in your local Slack app.
+
+**Bidirectional sync** (post in one → mirror to the other) is queued for v0.1.16. Today, mapping is a navigation shortcut only — messages stay in their respective platforms.
+
 ### Claude Code
 
 > **Requires a Claude Pro or Claude Max subscription.** The free `claude.ai` tier does not work with the Claude Code CLI.
