@@ -8,7 +8,9 @@ CodeNow ships in batched signed/notarized desktop builds plus continuous Vercel 
 
 | Version | Date | Highlights |
 |---|---|---|
-| **[v0.1.12](/release-notes/v0-1-12)** | 2026-05-04 | Sign-in hotfix — keychain dual-storage fallback (kills the persistent "Your sign-in needs a refresh" banner) + banner-overlay fix (banners no longer paint over the topbar). Supersedes v0.1.11. Manual install required for v0.1.10/v0.1.11 users. |
+| **[v0.1.14](/release-notes/v0-1-14)** | 2026-05-04 | Team feature, hardened end-to-end. Personalized invitations with First/Last name + greeting ("Hi Sarah,"). Members modal consolidates Members + Channels + Live coding session + Recent activity audit log into one surface. Server-side `team_audit_log` records every membership event; system messages post into channels on join/leave/remove. Trial users can invite (capped at 5 seats per project). Email FROM unified to `no-reply@codenow.pro`. Stale-session banner removed. |
+| v0.1.13 | 2026-05-04 | Internal — built but never published. Fixes rolled into v0.1.14. |
+| [v0.1.12](/release-notes/v0-1-12) | 2026-05-04 | Sign-in hotfix — keychain dual-storage fallback (kills the persistent "Your sign-in needs a refresh" banner) + banner-overlay fix (banners no longer paint over the topbar). Supersedes v0.1.11. Manual install required for v0.1.10/v0.1.11 users. |
 | v0.1.11 | 2026-05-04 | Partial hotfix — included the keychain fix but missed the banner-overlay fix. Superseded by v0.1.12; do not install. |
 | [v0.1.10](/release-notes/v0-1-10) | 2026-05-04 | Connections catalog restored (52 MCPs, was 2) · + Invite team in topbar · login screen show/hide password + Remember me · stale-session banner (universal "asking to login when logged in" fix) · voice MVP pulled, replaced by Slack/Discord/Zoom integration · promises-driven E2E smoke rig (92 promises tracked, 85 covered, 0 gaps) |
 | [v0.1.9](/release-notes/v0-1-9) | 2026-05-03 | Threads sidebar (Zed parity) · per-project Autonomy toggle · embeddings codebase indexer · Tab autocomplete v2 · DefenseClaw scaffold-time policy · footer/topbar bug sweep |

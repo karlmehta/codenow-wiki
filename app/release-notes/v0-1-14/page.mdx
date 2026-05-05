@@ -1,0 +1,78 @@
+---
+title: v0.1.14 — Team feature hardened
+---
+
+# v0.1.14 — Team feature, hardened end-to-end
+
+Released **2026-05-04**. macOS Apple Silicon DMG signed + notarized; Windows + Linux build via CI on tag push.
+Install from [codenow.pro/download](https://codenow.pro/download/mac).
+
+## What this release is for
+
+The team feature — invite a teammate by email, chat in channels, pair-program in real time — was scattered across three different surfaces (topbar `+ Invite team`, Business → Workforce → Channels, bottom-right `Share` button). v0.1.14 consolidates the developer-side flow into the Members modal, hardens offboarding with an audit log, and personalizes the invitation email.
+
+## Personalized invitations
+
+The Invite teammate form now collects:
+
+- **First name** (optional)
+- **Last name** (optional)
+- Email (required)
+- Role (viewer / editor / owner)
+- Optional welcome message
+
+When the first name is provided it flows into the invitation email greeting (`Hi Sarah,`) and the subject line (`Karl Mehta invited you, Sarah, to SDR Agent on CodeNow`) so a teammate's inbox preview reads like a real person sent it. The first/last name are also stored on the `team_invitations` row so resends keep the personal touch.
+
+## Consolidated Members modal — one place for everything
+
+`+ Invite team` in the topbar now opens a single modal with:
+
+| Section | What it does |
+|---|---|
+| **Members** | List of current members with role + join date. Owners see a Remove button per row. Non-owners see a **Leave team** button on their own row. |
+| **Pending invitations** | Open invite tokens with a Revoke button (owner-only). Revoking the link returns 410 to anyone trying to accept. |
+| **Channels** | Inline list of project channels with #name + Open chat button. *Open chat* jumps directly to Business → Workforce → that channel. **+ New channel** also opens from here. |
+| **Live coding session** | One button: **Start Share session →** — closes the modal and opens the existing CRDT pair-programming flow (shared editor, cursors, presence). |
+| **Recent activity** | Audit log of who invited / accepted / revoked / removed / left, with timestamps. Owners + members both see this. |
+| **About team access** | Honest help block — clarifies what a removal does and doesn't do. |
+
+The Channels section is also still mounted in Business → Workforce; that's where business users live, so we kept it. The consolidated modal is the developer-side entry point.
+
+## Audit + system messages on every team event
+
+A new `team_audit_log` table records every membership change with actor, target, role, and metadata. The Members modal surfaces it as the "Recent activity" feed.
+
+In parallel, **accept / remove / leave events post a system message into every channel** of the project: "Sarah joined the team as editor", "Karl removed Sarah from the team", "Sarah left the team". These show up in chat history with `CodeNow` as the author so the team always knows who was on the project when.
+
+## Honest offboarding semantics
+
+Removing a team member from a project:
+
+- ✅ Cuts their CodeNow team access — channels, messages, members list, and live realtime — instantly. RLS on `team_channels` and `team_messages` means the subscription drops the moment the `team_members` row is deleted.
+- ✅ Pending invitations they haven't accepted can be revoked separately.
+- ❌ Does **not** delete their CodeNow account. They keep their personal workspace.
+- ❌ **Cannot recall code they have already cloned to their machine.** Manage source-code access through your repo's permissions (GitHub, GitLab, etc.) — CodeNow does not gate the filesystem.
+
+The Members modal now says all of this in plain language under "About team access".
+
+## Trial users can now invite
+
+Free plan users still hit a hard 402 on invite. Trial users (the default for new signups) can invite teammates capped at **5 seats per project** (members + pending invitations). Once a seat opens (member removed or invite revoked) the next invite is allowed. Upgrade to lift the cap.
+
+## Email infrastructure
+
+- All transactional emails now FROM `CodeNow <no-reply@codenow.pro>`, REPLY-TO `admin@codenow.pro`. Resend domain authorization confirmed end-to-end.
+- Send-failure no longer breaks the invite flow — the invitation row still gets created and the inviter can copy the accept link manually if Resend is offline.
+
+## Stale-session banner removed
+
+The yellow banner at the top of the IDE that surfaced "Your sign-in needs a refresh" is gone. Server-bound features now render their own actionable re-auth prompts when the token actually fails. Collaboration's access-token resolver also mirrors main.js' dual-storage path (keychain → auth.json fallback) so Share + live collab keep working through keychain ACL drift.
+
+## Internal note: v0.1.13
+
+Built locally but never published to GitHub Releases. All v0.1.13 fixes rolled into v0.1.14:
+
+- Trial-user invite gate
+- Email FROM unification
+- Auth keychain → auth.json auto-migration on boot
+- Banners no longer overlay the topbar (carried from v0.1.12)
