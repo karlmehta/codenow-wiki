@@ -1,0 +1,54 @@
+---
+title: v0.1.19 — Terminal lockup fix
+---
+
+# v0.1.19 — Terminal lockup fix
+
+Released **2026-05-09**. macOS Apple Silicon DMG signed + notarized; Windows + Linux ship via CI. Install from [codenow.pro/download](https://codenow.pro/download/mac).
+
+> **Apple Silicon only.** The Intel Mac (x64) build did not ship in this release because the macos-13 CI runner pool was clogged at tag time. Intel users on v0.1.18 will not auto-update; the v0.1.20 release will restore Intel coverage. Apple Silicon (M1 / M2 / M3 / M4) Macs auto-update normally.
+
+This is a **critical bugfix release** focused entirely on a single problem that beta testers reported as the most frustrating thing about CodeNow: the embedded terminal would silently stop accepting keystrokes after a flood of output and only a full window reload (Cmd+R) recovered — destroying scrollback and the active project state with it.
+
+## What was wrong
+
+Every chunk of output from a child process (claude tool result, long compile output, big test run, verbose CLI) was sent across the Electron IPC boundary as a separate message. A single 200KB tool result from claude could fan out into hundreds of tiny IPC sends inside ~200ms. The renderer event loop drowned serializing messages and thrashing the xterm.js GPU atlas. Keystroke handlers (`term.onData`) live on the same event loop and **could not be scheduled**, so the terminal looked locked even though the underlying shell was fine. Beta testers hit this consistently when running `claude` or large `npm test` invocations and had to reload the window to recover.
+
+## Four-part fix
+
+### 1. Frame-batched PTY → IPC drain (main process)
+
+`node-pty` chunks now coalesce for ~16ms (one animation frame) or until 64KB before dispatching a single IPC message. Cuts IPC traffic by roughly 100× on a typical claude tool result. Implemented in `src/main.js` around the `ipcMain.handle('terminal-create')` handler. Buffers are per-pty, keyed by `(projectPath, tabId)`, with a clean shutdown path that flushes on exit.
+
+### 2. Write-buffer backpressure (renderer ↔ main)
+
+`xterm.write(data, callback)` now reports completion. The renderer counts pending writes; when the count crosses 32, it calls a new `terminal-pause` IPC. The main process pauses the drain (buffers keep accumulating in main, not in the renderer). When pending drops to 8 the renderer fires `terminal-resume` and the buffered output flushes. Without this, even with frame-batching, a sustained 5MB+ output blast could still wedge the renderer.
+
+### 3. Focus recovery on mousedown
+
+xterm routes keystrokes through a hidden `<textarea>` that loses its input attachment when modals, notifications, or `Cmd+Tab` steal focus. The terminal would still appear focused but silently swallow keystrokes. Each terminal wrapper now re-focuses xterm on `mousedown` (deferred via `setTimeout(0)` so the natural focus event from the click settles first).
+
+### 4. Cmd+Shift+T — Reset Active Terminal (recovery hatch)
+
+For the rare case where backpressure + focus recovery aren't enough, **Cmd+Shift+T** disposes the active xterm instance and rebuilds it in the same wrapper without killing the underlying pty. You lose scrollback for that tab; the shell session and any buffered output survive and stream into the fresh xterm on resume. A small toast confirms the reset.
+
+## CI hardening (shipping alongside the fix)
+
+Three pre-existing CI breaks were unblocked as part of this release:
+
+- **Smoke CI lockfile.** `.github/workflows/smoke.yml` ran `npm ci` against a gitignored `package-lock.json`, so smoke had been failing at dependency install on every push for weeks. Lockfiles are now committed for the root + `tools/{smoke,demo,screenshots}/`.
+- **Smoke runtime stage.** `npm ci --ignore-scripts` was skipping not just node-pty's electron-rebuild but also Electron's own postinstall, which broke `electron.launch` in the runtime stage. Dropped `--ignore-scripts`. v0.1.19 is the first green smoke run since v0.1.15.
+- **Release CI artifact-quota dependency.** The release pipeline used `actions/upload-artifact` → `actions/download-artifact` → release attach, and the artifact storage quota was hit during v0.1.19 builds. Replaced the upload+download dance with `softprops/action-gh-release` running directly inside each matrix job. The action is idempotent on the same tag — the first job creates the release with auto-generated notes; subsequent jobs append their files. Quota can no longer block a release.
+- **Codesign identity-count parser.** `security find-identity -v -p codesigning | tail -1 | grep -oE '^[0-9]+'` was anchored to column 1, but the summary line is `    1 valid identities found.` with leading whitespace, so the defensive parser was reporting 0 identities even when the cert was correctly imported. Drop the `^` anchor.
+
+## Auto-updater behavior
+
+Existing v0.1.18 users on Apple Silicon Mac, Windows, and Linux will receive an auto-update notification within ~4 hours of next launch. The auto-update path uses `latest-mac.yml` / `latest.yml` / `latest-linux.yml` published as GitHub Release assets, all of which shipped correctly with v0.1.19.
+
+Intel Mac users on v0.1.18 will **not** receive an update — `latest-mac.yml` only references `arm64.zip`. They'll catch up on v0.1.20.
+
+## Known follow-ups (v0.1.20)
+
+- **Restore Intel Mac (x64) build.** The macos-13 runner stuck-queue problem isn't new; we'll either give the runner a longer queue timeout or build x64 on an arm64 runner with `--cross` if electron-builder supports it cleanly.
+- **Fix the pre-existing `voice.deferred-to-integrations` smoke test.** It's red but predates the v0.1.10 voice deferral, so it's testing behavior we deliberately removed. Either delete the test or update the assertion to match the deferred-to-integrations message.
+- **Move artifact deletion into a scheduled cleanup workflow.** Even with the release CI no longer using upload-artifact, the smoke workflow still does. Daily artifact cleanup keeps the quota healthy without manual `gh api -X DELETE` runs.
