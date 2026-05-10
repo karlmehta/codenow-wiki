@@ -1,0 +1,100 @@
+---
+title: v0.1.21 — Auth self-heal · Read-only share links · Mac Intel restored
+---
+
+# v0.1.21 — Auth self-heal · Read-only share links · Mac Intel restored
+
+Released **2026-05-10**. macOS (Apple Silicon **and** Intel), Windows, and Linux all ship together for the first time since v0.1.18. Install from [codenow.pro/download](https://codenow.pro/download/mac).
+
+> **Mac Intel is back.** v0.1.20 did not ship Intel because the macos-13 CI runner queue stalled for 36+ hours. v0.1.21 cross-compiles both architectures from a single Apple Silicon runner, so Intel users can install [CodeNow-x64.dmg](https://codenow.pro/download/mac-intel) directly. Auto-update will pick the right arch automatically from `latest-mac.yml`.
+
+This release bundles five interlocking fixes that closed gaps Karl hit during dogfooding the v0.1.20 build. Each section below is independent and could ship alone — they're bundled because they were all caught in one session.
+
+## Auth refresh — silent self-heal
+
+**The bug:** dead refresh tokens couldn't recover. Sign in once, leave the laptop overnight, click "Invite team" the next morning — modal showed "Your secure access token expired. Sign in again." Even after signing in, the same dead state could come back.
+
+**Root cause:** Supabase rotates refresh tokens on every successful refresh. Two concurrent refresh attempts (boot proactive timer + a renderer IPC like `crdt-get-access-token`) could both read the same RT, one wins and saves the new RT, the other gets `refresh_token_already_used` from Supabase. If the loser's failure happened to overwrite the winner's save, the persisted state contained an already-used RT and every future refresh failed.
+
+**Fix:**
+
+- **`tryRefreshToken` is now single-flight.** A module-level `_refreshInFlight` promise dedupes concurrent callers. Boot proactive refresh, the 25-min timer, every `withCollabRefresh` wrapper, every `team:*` IPC, and `crdt-get-access-token` all share one Supabase round-trip and observe the same outcome.
+- **Inside the lock, the session is re-read from disk** (not the caller's parameter). This eliminates a stale-session footgun where boot's `isSessionValid` would pass a pre-refresh `session` object back into `tryRefreshToken`, causing a spurious "already used" failure with the now-rotated RT.
+- **Terminal failures auto-recover.** When Supabase returns `refresh_token_already_used` / `invalid refresh token` / `refresh_token_revoked` / `refresh_token_not_found` / `user not found`, the desktop calls `clearLocalAuth()` and bounces directly to the auth screen. No more dead-end "Sign in again" panel — users land on sign-in immediately.
+- **`team:*` IPCs now proactively refresh upfront**, matching `withCollabRefresh`. Team was the last server surface that only reacted after a 401, which is too late if the chain is already broken.
+
+After this release, expired tokens self-heal indefinitely and there is no UX state in which a refreshable session looks like a dead one.
+
+## Read-only share links — full anonymous-share flow
+
+**What's new:** mint a public URL that lets anyone with it open a project in **read-only viewer mode**. No per-email invite, no Supabase project record needed, no waiting for a confirmation email.
+
+A new **Share view-only** button sits next to the existing **Share** button in the status bar. Click it on any project with a Git remote and:
+
+1. Pick a label ("for Anthropic eval", "for the lab review") and an expiry (7 / 30 / 90 days, or never until revoked).
+2. Click **Generate link** — the desktop app mints a token via `/api/team/view-links`.
+3. Copy the URL and paste it anywhere — Slack, email, doc, GitHub comment.
+
+Anyone who opens the link sees a landing page at `codenow.pro/view/<token>` with the project name, the clone command (with copy button), download CTAs for the desktop, and a one-click **Open in CodeNow** button.
+
+In the desktop, that button fires a `codenow://view/<token>` deep link. CodeNow validates the token, prompts the recipient to pick a folder (defaults to `~/codenow/<repo-name>`), runs `git clone` directly, registers the cloned repo as a new project, and opens it in viewer mode:
+
+- Monaco editor is read-only
+- "Go live" CRDT button is disabled
+- Studio Run / publish / save actions are disabled
+- A **VIEWER · READ-ONLY** pill appears in the topbar
+
+On every project switch, the viewer token is re-validated. If the owner revokes the link, the recipient keeps their local clone but the share session is honestly marked as terminated.
+
+The owner can manage links from the same modal — list of active / expired / revoked links with last-used time, open count, copy / revoke per row.
+
+**Pricing:** sharing read-only links requires a paid plan (same gate as `/api/team/invite` — anonymous links are billable surface).
+
+**Schema:** two SQL files under `site/`. `project-view-links-schema.sql` creates the table + 3 RLS policies + 3 indexes. `project-view-links-add-git.sql` adds `github_url`, `git_branch`, `git_commit` columns so the link is self-contained (recipient knows what to clone). Apply once via the Supabase SQL editor on a fresh database; both are idempotent.
+
+## Model Arena — honest empty state
+
+**The bug:** clicking **Run Arena** on a fresh sign-in with no provider keys configured looked dead — nothing visibly happened.
+
+**Root cause:** `arenaRun` returned early with `showToast('No provider keys configured…')`. Toasts render at z-index 9999, but the arena overlay backdrop is at 10001 — the toast was rendering *behind* the modal and was invisible to the user.
+
+**Fix:** replaced the silent toast with an inline empty-state card in the arena body — clearly labeled "No provider keys configured" with **Manage AI keys** (closes arena, opens AI rail) and **Re-check keys** buttons. Also called proactively when the modal opens, so the empty state shows up *before* the user wastes a click on Run Arena.
+
+## Smoke gap — popup-internal dead clicks
+
+The dead-click smoke rig had three blind spots that combined to miss the Run Arena bug:
+
+1. **Selector was `button[id]` only** — class-only buttons (most modal-internal buttons + every `user-pill-item` in the user dropdown) were skipped.
+2. **One level deep** — once a level-1 button opened a modal, the rig stopped there. Run Arena was at level 3 (topbar → user-pill → arena overlay → button), beyond the sweep depth.
+3. **Toast feedback passed even when occluded** — `toast.classList.contains('visible')` flipped, so the rig saw "observable change" even when the toast was actually invisible behind a higher-z-index overlay.
+
+A new `ux.no-dead-clicks-in-popups` smoke case closes all three gaps:
+
+- Sweeps every visible `button, [role="button"]` inside the four JS-overlay popups (arena, capability tuning, provider call log, share view-only) — no `[id]` requirement, indexes class-only buttons.
+- Real-mouse-clicks each one and asserts an observable change at the popup level (overlay set + content fingerprint of every open overlay + modal set + toast feedback).
+- Toast feedback is rejected if `document.elementFromPoint(toastCenter)` shows it's occluded — invisible-to-user toasts no longer count as feedback.
+
+The existing `ux.no-dead-clicks-*` sweeps + the real-mouse banner sweep also got `div[id$="-overlay"]` snapshot fingerprints, so any future status-bar / topbar button that opens a JS overlay will register as a real interaction without per-button allowlisting.
+
+## Mac Intel — restored via cross-compile
+
+**The history:** v0.1.5 dropped Mac Intel because the macos-13 CI runner pool was stalling for 20+ minutes per queue spot. v0.1.19 re-enabled it with `fail-fast: false` so the slow Intel runner couldn't kill the other platforms. v0.1.20 tagged successfully but the macos-13 job stalled for 36+ hours waiting for a runner — `CodeNow-x64.dmg` never shipped.
+
+**The fix:** stop depending on macos-13. The two Mac matrix rows are now one row that runs on `macos-latest` (Apple Silicon) with `--mac --arm64 --x64`. Apple Silicon cross-compiles x64 binaries fine, and `build/sign-and-notarize-dmg.js` already loops over `buildResult.artifactPaths`, so both DMGs get signed + notarized + stapled in the same job. Total Mac runtime is ~30–50 min vs. 36+ hours of queue stall.
+
+`latest-mac.yml` now lists both archs; `electron-updater` picks the right binary at runtime. Intel users on v0.1.18 (the last release that included an Intel build) will auto-update directly to v0.1.21.
+
+## Auto-updater behavior
+
+Existing installs auto-update normally:
+
+- **v0.1.20 Apple Silicon, Windows, Linux** users → v0.1.21 within ~4 hours of next launch.
+- **v0.1.18 Mac Intel** users (the last release that shipped Intel) → v0.1.21. Manifest covers both archs.
+
+After the update applies, sign in once if your previous session was in the dead-RT state (your old refresh token will be auto-cleared on first refresh attempt). From then on, the auth chain self-heals.
+
+## What's queued
+
+- **Stripe billing + tier enforcement.** The `/api/team/view-links` endpoint already returns 402 for free-plan users, but the desktop app doesn't check tier before showing the Share view-only button — viewer-link minting will fail at the server with a clear error, but it would be cleaner to gate at the UI level.
+- **Web-based read-only viewer.** Today the recipient must install CodeNow to view. A future release could serve a static read-only Monaco view from `codenow.pro/view/<token>` so reviewers without the desktop app can still open the project in a browser.
+- **v0.1.16 → v0.1.18 + v0.1.20 release notes.** Those versions shipped but the wiki release-notes index hasn't backfilled them yet.

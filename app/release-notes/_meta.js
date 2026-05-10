@@ -1,4 +1,5 @@
 export default {
+  'v0-1-21': 'v0.1.21 — Auth self-heal · Read-only share links · Mac Intel',
   'v0-1-19': 'v0.1.19 — Terminal lockup fix',
   'v0-1-15': 'v0.1.15 — Beta-feedback sweep',
   'v0-1-14': 'v0.1.14 — Team feature hardened',

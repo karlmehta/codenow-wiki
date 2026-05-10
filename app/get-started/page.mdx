@@ -28,16 +28,16 @@ import { Steps, Callout, Tabs, FileTree } from 'nextra/components';
 
 <Tabs items={['macOS (Apple Silicon)', 'macOS (Intel)', 'Windows', 'Linux']}>
   <Tabs.Tab>
-    Download the signed + notarized `.dmg` from [codenow.pro/api/download?os=mac](https://codenow.pro/api/download?os=mac) — about 100 MB.
+    Download the signed + notarized `.dmg` from [codenow.pro/download/mac](https://codenow.pro/download/mac) — about 108 MB. Auto-update is wired (every install since v0.1.6 checks GitHub Releases via the Vercel proxy).
   </Tabs.Tab>
   <Tabs.Tab>
-    Intel Mac builds are coming. For now, the [Apple Silicon DMG](https://codenow.pro/api/download?os=mac) runs under Rosetta 2.
+    Intel Mac is supported as of [v0.1.21](/release-notes/v0-1-21). Download the signed + notarized `.dmg` from [codenow.pro/download/mac-intel](https://codenow.pro/download/mac-intel) — about 114 MB. v0.1.20 did not ship Intel because the macos-13 CI runner queue stalled; v0.1.21 cross-compiles both archs from a single Apple Silicon runner so future releases ship Intel automatically.
   </Tabs.Tab>
   <Tabs.Tab>
-    Windows builds are coming. Track progress on the [GitHub Releases page](https://github.com/karlmehta/codenow/releases).
+    Download the signed installer (`CodeNow-Setup.exe`, ~94 MB) from [codenow.pro/download/windows](https://codenow.pro/download/windows). NSIS one-click install. Auto-update is wired.
   </Tabs.Tab>
   <Tabs.Tab>
-    Linux AppImage is coming. Track progress on the [GitHub Releases page](https://github.com/karlmehta/codenow/releases).
+    Download the AppImage (~92 MB) from [codenow.pro/download/linux](https://codenow.pro/download/linux). `chmod +x` and run, or wire to your launcher.
   </Tabs.Tab>
 </Tabs>
 
