@@ -1,0 +1,153 @@
+---
+title: v0.1.27 — Browser control · Mobile PWA · JIRA→Studio · K8s adapter · GSD · Enterprise compliance
+---
+
+# v0.1.27 — Browser control · Mobile PWA · JIRA→Studio · K8s adapter · GSD · Enterprise compliance
+
+Released **2026-05-19**. macOS (Apple Silicon **and** Intel), Windows, and Linux. Install from [codenow.pro/download](https://codenow.pro/download/mac). Auto-updates from v0.1.18+.
+
+This is the largest single tag since v0.1.8. It ships seven distinct features — five planned for this cycle, plus two added to reach parity with Codex Desktop.
+
+---
+
+## JIRA → Multi-model Studio Run
+
+The most-requested integration feature: click a JIRA ticket in the JIRA panel, then switch to Studio Run — and all three agents (Claude, Codex, Gemini) automatically receive the full ticket context.
+
+A blue chip appears above the @-mention rail: `◈ CN-42  Prevent duplicate charge on retry ×`. The context block injected into every agent's system prompt:
+
+```
+--- JIRA CN-42
+Title: Prevent duplicate charge on retry
+Priority: High
+Labels: billing, critical
+<description text>
+---
+```
+
+Hit `×` to clear. The chip is tied to the last ticket you clicked — switch tickets, context updates automatically.
+
+---
+
+## K8s / Container adapter
+
+The Deploy tab now supports **Kubernetes** alongside Vercel. Pick your target with the pill selector (Vercel / K8s).
+
+**What it generates:** Dockerfile (node:20-slim, port 3000) + a full Helm chart — `Chart.yaml`, `values.yaml`, `deployment.yaml` (readiness + liveness on `/health`), `service.yaml`, `configmap.yaml`, HPA (min 1 / max 5, CPU 70%).
+
+**Multi-registry auth:** ECR (`aws ecr get-login-password`), ACR (`az acr login`), GCR (`gcloud auth configure-docker`), GHCR, Docker Hub.
+
+**Deploy flow:** `helm upgrade --install`. Rollback via `helm rollback`. Log streaming via `kubectl logs`. Status via `helm status` parsed JSON.
+
+---
+
+## Phase 2 Trust Runtime
+
+The `TrustGuard` class wraps every agent tool call:
+
+- **Tool allowlist** — blocked tools decrement TrustScore by 10
+- **PII detection** — email, SSN, credit card patterns; decrement 20 on detection
+- **Payment flag** — any call touching payment APIs requires approval
+- **Approval gate** — 30-second timeout; POST `/trust/approve/:id` or `/trust/deny/:id` on localhost:3001; approval denied decrements 15
+
+TrustScore starts at 100, floors at 0. Events persisted to `<slug>-trust-events.jsonl`. HTTP server on port 3001 exposes `/trust/status`, `/trust/approve/:id`, `/trust/deny/:id` for tooling integration.
+
+---
+
+## GitHub Action wrapper
+
+```yaml
+- uses: codenow/deploy-action@v1
+  with:
+    agent-slug: my-agent
+    target: vercel          # or k8s
+    registry: ecr           # for k8s target
+```
+
+Outputs: `deployment-url`, `trust-score`. Uploads the trust report as a workflow artifact. The composite action runs `npm ci`, invokes the CodeNow CLI, and parses machine-readable output.
+
+---
+
+## GSD Phase 1 — SDLC auto-detect
+
+GSD (Get Stuff Done) is a Claude-native SDLC framework that adds slash commands for your full dev lifecycle. CodeNow now:
+
+1. **Auto-detects** GSD via `.claude/commands/gsd/*.md`, `.gsd/` dir, or `package.json` dependency
+2. **Shows a green `GSD` badge** in the status bar when active
+3. **Surfaces a command palette** in the Agents → SDLC sub-tab — every detected command as a one-click button that dispatches the slash command into the Claude terminal
+4. **One-click install CTA** for projects without GSD
+
+---
+
+## Enterprise compliance layer
+
+Every K8s deployment scaffold now includes a `compliance.policy.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "requiredTags": ["CostCenter", "DataClassification", "Owner"],
+  "secretRefs": { "format": "aws-secrets://|azure-keyvault://|gcp-secretmanager://|vault://|env://" },
+  "iamProvider": "aws|azure|gcp|none",
+  "auditSink": { "type": "splunk|datadog|sumo|file" },
+  "airgap": false
+}
+```
+
+**Secret manager resolution:** CLI subprocess dispatch — `aws secretsmanager get-secret-value`, `az keyvault secret show`, `gcloud secrets versions access`, Vault API calls.
+
+**Air-gap bundle:** pure Node zlib + crypto, no network, SHA-256 `MANIFEST.sig` for offline deployment verification.
+
+**Audit log sinks:** Splunk HEC, Datadog `/api/v2/logs`, Sumo Logic HTTP Source, local file.
+
+---
+
+## Browser control panel *(Codex parity)*
+
+A new **Browser** tab in the bottom panel embeds a real `WebContentsView` — not a webview, not an iframe. Full browser running inside the IDE window.
+
+**Toolbar:** Back, Forward, address bar, Go, **Send to AI**.
+
+**AI-controllable:** The Tools tab surfaces six browser tools:
+
+| Tool | What it does |
+|---|---|
+| `browser_navigate` | Load a URL |
+| `browser_click` | Click at (x, y) |
+| `browser_type` | Type text into focused element |
+| `browser_screenshot` | Capture page as base64 PNG |
+| `browser_scroll` | Scroll at position |
+| `browser_evaluate` | Execute JS, get return value |
+
+Any agent with browser tools enabled can drive the embedded browser. Screenshot output can be fed back as context. Use cases: visual regression testing, form automation, scraping research, PR preview review.
+
+---
+
+## Mobile PWA at codenow.pro/app *(Codex parity)*
+
+Open **codenow.pro/app** on your phone and tap **Add to Home Screen** — it installs as a native-feeling app (dark theme, iOS safe-area-inset, no browser chrome).
+
+**Four tabs:**
+
+| Tab | What it shows |
+|---|---|
+| **Runs** | Recent agent runs with TrustScore pills (green/yellow/red). Tap → full detail: prompt, per-model responses, score. |
+| **Approve** | Trust gates needing your decision — runs with score below threshold. Tap Approve or Deny; decision writes to Supabase `trust_decisions` and the desktop agent picks it up on next poll. |
+| **Skills** | All agent skills for your projects. Toggle active/inactive, edit body text inline. |
+| **Projects** | Your projects, member count, last run time. Tap → member list + recent runs. |
+
+Service worker: cache-first for app shell, network-first for Supabase API calls. Works offline (shows last cached data).
+
+---
+
+## Smoke
+
+139/139 runtime cases pass. Six new cases added specifically for this release:
+
+- `browser.bottom-tab-renders` — Browser tab activates panel, address bar present
+- `browser.preload-bridges-present` — All 10 `browser:*` IPC bridges verified
+- `jira.studio-context-bridge` — Set/clear/chip/context-block round-trip
+- `k8s.preload-bridges-present` — K8s + rollback + trust-data bridges
+- `compliance.preload-bridges-present` — All 4 compliance bridges
+- `deploy.k8s-target-selector-renders` — Deploy pane renders both target pills
+
