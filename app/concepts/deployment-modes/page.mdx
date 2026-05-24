@@ -171,27 +171,49 @@ Three properties enterprise security teams already accept:
 - **Pull API** — `GET /api/sidecar/pull` (long-poll) returns queued
   changes for the calling sidecar's customer token.
 
-### Install
+### Install — three deployment options
 
 ```bash
-# 1. In CodeNow Desktop: Business mode → Sidecars tab → "+ Mint sidecar"
-#    Name it (e.g. "prod-us-east-1") and copy the token (shown exactly once).
-
-# 2. On the customer's agent host (Linux):
-curl -fsSL https://codenow.pro/sidecar/install.sh | bash -s -- --token=codenow_sc_xxx
-codenow-sidecar
-
-# Or via npm (any host with Node 18+):
-npx -y @codenow/sidecar --token=codenow_sc_xxx
-
-# Or via systemd (one-time install + auto-restart):
-curl -fsSL https://codenow.pro/sidecar/install.sh | \
-  bash -s -- --token=codenow_sc_xxx --systemd --start
+# 0. Mint a token in CodeNow Desktop:
+#    Business mode → Sidecars tab → "+ Mint sidecar". Shown exactly once.
 ```
 
-The sidecar logs `listening on http://127.0.0.1:8721 (loopback only)` and
-starts pulling state. The first poll completes within seconds; you'll see
-a green **● Connected** pill against the row in CodeNow's Sidecars tab.
+**Option A — bare VM with hardened systemd (recommended for VM fleets)**
+
+```bash
+curl -fsSL https://codenow.pro/sidecar/install.sh | \
+  sudo bash -s -- --token=codenow_sc_xxx --systemd --start
+```
+
+Installs to `/opt/codenow-sidecar`, creates a `codenow` system user, writes a hardened systemd unit (`NoNewPrivileges`, `ProtectSystem=strict`, capabilities dropped), enables + starts it.
+
+**Option B — Docker container (recommended for k8s-adjacent stacks)**
+
+```bash
+docker run --rm -d \
+  --name codenow-sidecar \
+  -e CODENOW_SIDECAR_TOKEN=codenow_sc_xxx \
+  -p 127.0.0.1:8721:8721 \
+  --read-only \
+  --cap-drop=ALL \
+  --security-opt no-new-privileges:true \
+  karlmehta/codenow-sidecar:0.1.28
+```
+
+Or with docker-compose — see `tools/sidecar/docker-compose.yml` in the repo for the pre-wired version.
+
+**Option C — Kubernetes (recommended for k8s shops)**
+
+```bash
+kubectl create namespace codenow
+kubectl -n codenow create secret generic codenow-sidecar \
+    --from-literal=token=codenow_sc_xxx
+kubectl apply -f https://codenow.pro/sidecar/k8s.yaml
+```
+
+The manifest at `tools/sidecar/k8s.yaml` includes a Deployment + ClusterIP Service + NetworkPolicy. Liveness on `/livez`, readiness on `/readyz`, Prometheus annotations on `/metrics`.
+
+In all three cases the sidecar logs `listening on http://...:8721 (loopback only)` and starts pulling state. First poll completes within seconds; you'll see a green **● Connected** pill against the row in CodeNow's Sidecars tab.
 
 ### How your agent reads from the sidecar
 
@@ -215,24 +237,26 @@ async function loadSidecarSystemPrompt(): Promise<string> {
 If the sidecar isn't running, this returns `""` and your agent runs
 normally — fail-open by design.
 
-### Status — what ships in v0.1.28
+### Status — what ships in v0.1.28 (production-ready)
 
-- ✅ Sidecar binary at `tools/sidecar/` — Node.js, zero deps, runs anywhere with Node 18+
-- ✅ `POST /api/sidecar` / `GET /api/sidecar` / `DELETE /api/sidecar` — owner-side enrollment
-- ✅ `GET /api/sidecar/pull` — 25s long-poll, returns latest skills + guardrails
-- ✅ `POST /api/sidecar/heartbeat` — keep-alive for sidecars between long-polls
-- ✅ Desktop UI: **Business mode → Sidecars** tab — mint + list + revoke
-- ✅ Claude Agent SDK TS scaffold ships a ready-made `sidecar.ts` that composes
-  skills + guardrails into the system prompt automatically
-- ✅ Install via `curl ... | bash`, `npx`, or systemd one-shot
+- ✅ Sidecar binary at `tools/sidecar/index.mjs` — Node.js 18+, zero external deps
+- ✅ Endpoints: `/health` `/skills` `/guardrails` `/state` `/metrics` `/readyz` `/livez` `POST /runs`
+- ✅ Server endpoints: `POST/GET/DELETE /api/sidecar` + `GET /api/sidecar/pull` + `POST /api/sidecar/heartbeat` + `POST /api/sidecar/runs`
+- ✅ **Audit-log forwarding** — sidecar accepts runs over loopback and forwards to CodeNow's `agent_runs` (tagged with `sidecar_id`). Closes the observability loop.
+- ✅ **Prometheus metrics** — counters for pull successes/failures/no-change, runs accepted/forwarded/errored, uptime + state-size gauges.
+- ✅ **YAML config file** support — `/etc/codenow-sidecar/config.yml` by default, override via `--config=` or `CODENOW_SIDECAR_CONFIG`.
+- ✅ **Hardened systemd unit** — runs as `codenow` user, `NoNewPrivileges`, `ProtectSystem=strict`, capabilities dropped.
+- ✅ **Docker image** — `karlmehta/codenow-sidecar:0.1.28`, multi-arch (amd64/arm64), non-root, `HEALTHCHECK` against `/livez`.
+- ✅ **Kubernetes manifest** — Deployment + Service + NetworkPolicy + readiness/liveness probes + Prometheus scrape annotations.
+- ✅ **Drop-in SDK shims for all four harnesses** — `sidecar.ts` lands in Claude TS + Cursor TS scaffolds; `sidecar.py` lands in Claude Python + Microsoft Agent Framework + Google ADK scaffolds. Each `agent.{ts,py}` composes the sidecar prompt automatically.
+- ✅ Desktop UI: **Business mode → Sidecars** tab — mint + list + revoke + status pills (Connected / Waiting / Revoked).
 
-### Status — what's deferred to v0.1.29+
+### Status — deferred to v0.1.29+
 
-- Docker image (`karlmehta/codenow-sidecar:0.1.28`)
-- Drop-in shims for Cursor SDK, Microsoft Agent Framework (Python), Google ADK (Python)
-- Multi-tenant sidecar (one sidecar mirroring multiple projects)
-- SBOM signing
-- Sidecar → CodeNow audit-log forwarding (closing the runs loop)
+- Multi-tenant sidecar (one binary mirroring multiple projects). Today: run one sidecar per project on different ports.
+- SBOM signing (cosign-based supply-chain provenance).
+- Custom CA support for corporate TLS-interception environments.
+- Token rotation (today: revoke + re-mint).
 
 If you need any of the above before v0.1.29 lands, file an issue at
 [github.com/karlmehta/codenow-wiki/issues](https://github.com/karlmehta/codenow-wiki/issues)
