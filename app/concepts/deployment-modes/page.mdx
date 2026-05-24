@@ -16,7 +16,7 @@ deployed.
 |---|---|---|---|---|
 | A — **Localhost** | Developer's laptop, via CodeNow | Yes (on every call) | Yes (full JSONL) | Shipping |
 | B — **Agent21 / partner host** | Partner-managed runtime (e.g. Sophia, Agent21) | Yes (via partner API) | Yes (via partner API) | Shipping for Agent21; Sophia in beta |
-| C — **Customer's own cloud** | AWS / GCP / Azure VPC under customer security | Yes — via **Sidecar** | Yes — via **Sidecar** | Sidecar **planned**, see below |
+| C — **Customer's own cloud** | AWS / GCP / Azure VPC under customer security | Yes — via **Sidecar** | Yes — via **Sidecar** | **Shipping in v0.1.28** — see below |
 
 ## How "Skillify" actually works at the wire level
 
@@ -171,24 +171,72 @@ Three properties enterprise security teams already accept:
 - **Pull API** — `GET /api/sidecar/pull` (long-poll) returns queued
   changes for the calling sidecar's customer token.
 
-### Status
+### Install
 
-**Sidecar is planned, not shipping.** Today, Mode C is **observability-only** — if
-you import an agent's runs (manifest + JSONL upload via CLI or a small
-emitter the customer runs in their stack), CodeNow renders them under
-**Runs** in the Agents panel. Skills you train in Business mode **do not
-flow back** to the agent until the sidecar lands.
+```bash
+# 1. In CodeNow Desktop: Business mode → Sidecars tab → "+ Mint sidecar"
+#    Name it (e.g. "prod-us-east-1") and copy the token (shown exactly once).
 
-The push side will land in two phases:
+# 2. On the customer's agent host (Linux):
+curl -fsSL https://codenow.pro/sidecar/install.sh | bash -s -- --token=codenow_sc_xxx
+codenow-sidecar
 
-- **Phase 1** (v0.1.30 target): sidecar binary + push/pull API for skills.
-  Single customer per sidecar. Static config.
-- **Phase 2** (later): multi-tenant sidecar + dynamic enrollment + SBOM
-  signing + audit log forwarded back to CodeNow.
+# Or via npm (any host with Node 18+):
+npx -y @codenow/sidecar --token=codenow_sc_xxx
 
-If you need this before it ships, drop a note in
-[the wiki repo's issues](https://github.com/karlmehta/codenow-wiki/issues)
-so we can prioritize against actual demand.
+# Or via systemd (one-time install + auto-restart):
+curl -fsSL https://codenow.pro/sidecar/install.sh | \
+  bash -s -- --token=codenow_sc_xxx --systemd --start
+```
+
+The sidecar logs `listening on http://127.0.0.1:8721 (loopback only)` and
+starts pulling state. The first poll completes within seconds; you'll see
+a green **● Connected** pill against the row in CodeNow's Sidecars tab.
+
+### How your agent reads from the sidecar
+
+```ts
+// Drop this into your agent. The Claude Agent SDK scaffold in CodeNow
+// includes a ready-made ./sidecar.ts that does exactly this.
+async function loadSidecarSystemPrompt(): Promise<string> {
+  const port = process.env.CODENOW_SIDECAR_PORT || '8721';
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/state`);
+    if (!r.ok) return '';
+    const { skills, guardrails } = await r.json();
+    return [
+      ...skills.map(s => `## ${s.title}\n${s.body}`),
+      ...guardrails.map(g => `## Guardrails\n${JSON.stringify(g.policy)}`),
+    ].join('\n\n');
+  } catch { return ''; }
+}
+```
+
+If the sidecar isn't running, this returns `""` and your agent runs
+normally — fail-open by design.
+
+### Status — what ships in v0.1.28
+
+- ✅ Sidecar binary at `tools/sidecar/` — Node.js, zero deps, runs anywhere with Node 18+
+- ✅ `POST /api/sidecar` / `GET /api/sidecar` / `DELETE /api/sidecar` — owner-side enrollment
+- ✅ `GET /api/sidecar/pull` — 25s long-poll, returns latest skills + guardrails
+- ✅ `POST /api/sidecar/heartbeat` — keep-alive for sidecars between long-polls
+- ✅ Desktop UI: **Business mode → Sidecars** tab — mint + list + revoke
+- ✅ Claude Agent SDK TS scaffold ships a ready-made `sidecar.ts` that composes
+  skills + guardrails into the system prompt automatically
+- ✅ Install via `curl ... | bash`, `npx`, or systemd one-shot
+
+### Status — what's deferred to v0.1.29+
+
+- Docker image (`karlmehta/codenow-sidecar:0.1.28`)
+- Drop-in shims for Cursor SDK, Microsoft Agent Framework (Python), Google ADK (Python)
+- Multi-tenant sidecar (one sidecar mirroring multiple projects)
+- SBOM signing
+- Sidecar → CodeNow audit-log forwarding (closing the runs loop)
+
+If you need any of the above before v0.1.29 lands, file an issue at
+[github.com/karlmehta/codenow-wiki/issues](https://github.com/karlmehta/codenow-wiki/issues)
+so we can prioritize.
 
 ## Importing agents in Mode C
 
@@ -218,17 +266,15 @@ Q: Where does the agent actually run?
 │      → Mode B. Partner API handles skill push. Full Skillify.
 │
 └─ In my company's own AWS/GCP/Azure under strict security
-       → Mode C. Wait for Sidecar (v0.1.30) for true skill push.
-         Today: import manifests + runs only; Skillify changes don't reach
-         the agent until you install the sidecar.
+       → Mode C. Install the Sidecar (v0.1.28+) inside the VPC.
+         Outbound long-poll to codenow.pro; loopback only to your agent.
 ```
 
 ## What this means for positioning
 
 CodeNow's marketing message is *"oversee, train, guardrail, supervise"*.
-That message is honest in Modes A and B today. In Mode C, the **oversee**
-half is honest now (you can watch runs); the **train / guardrail** half
-requires the sidecar to ship. Talk about it that way.
+With the v0.1.28 sidecar shipping, all four hold across Modes A, B, and C —
+the customer-cloud case no longer has an asterisk.
 
 When in doubt, ask: *"Does the agent's runtime ever call codenow.pro to
 fetch its system prompt?"* If yes (Modes A, B, or Mode C with sidecar):
