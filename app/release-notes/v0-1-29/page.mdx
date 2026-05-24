@@ -1,0 +1,96 @@
+---
+title: v0.1.29 — Trial pill · Stripe wired · 0 smoke fails
+---
+
+# v0.1.29 — Visible trial counter, Stripe wired end-to-end, every smoke green
+
+**Released 2026-05-24.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.28 is automatic on next launch.
+
+Two pieces:
+1. **Stripe + 7-day trial.** Trial countdown now lives in the topbar (not buried in a dropdown), the Stripe Payment Link is finally wired (env var was empty for 10 days), and the whole mint → pay → webhook → unlock loop works end-to-end.
+2. **Smoke 100%.** 141 cases pass, 0 fail. All four pre-existing failures traced to one root cause + fixed.
+
+## Visible 7-day trial pill
+
+Free trial users now see a persistent pill in the topbar:
+
+- **`Day 1 of 7 · Upgrade`** — first launch. Green.
+- **`Day 4 of 7 · Upgrade`** — amber starting at day 4 (≤ 3 days remaining).
+- **`Day 7 of 7 · Upgrade`** — red on the final day.
+
+Click the pill → opens the Stripe Payment Link in your browser → pay $9.99 → next CodeNow launch picks up the new plan. The desktop also has the day-8 hard paywall (`paywall.html`) — the new pill is an *earlier* upgrade affordance for users who don't want to wait for the gate.
+
+Hidden for paid and admin plans. Hidden once the trial expires (the paywall.html flow takes over from there).
+
+### Behind the scenes
+
+| Surface | What it does |
+|---|---|
+| `#trial-pill` button in `index.html` | Topbar DOM element, hidden by default |
+| `loadUserInfo()` in `app.js` | Reads `user.trialDaysLeft` from `/api/account/status` and populates the pill |
+| `openTrialUpgrade()` in `app.js` | Calls the same `paywallOpenCheckout` IPC the paywall.html "Upgrade" button uses |
+| `paywall:open-checkout` IPC in `main.js` | Composes `STRIPE_PAYMENT_LINK + ?client_reference_id=<userId>` and opens it in the system browser |
+| `/api/stripe/webhook` | Verifies the Stripe signature, flips `profiles.plan = 'paid'` on `checkout.session.completed` |
+| `/api/account/status` | Returns the live trial state + a per-user `checkoutUrl` for the desktop to open |
+
+### Setting up the Payment Link
+
+`STRIPE_PAYMENT_LINK` is a Vercel project env var. v0.1.29 ships with the production link wired ($9.99 including tax). To rotate or move to a new price:
+
+```bash
+vercel env rm STRIPE_PAYMENT_LINK production --yes
+printf 'https://buy.stripe.com/your-new-link' | vercel env add STRIPE_PAYMENT_LINK production
+vercel --prod --yes
+```
+
+The webhook secret (`STRIPE_WEBHOOK_SECRET`) was already configured.
+
+## Smoke — 141 pass / 0 fail
+
+All four pre-existing failures had **one root cause**: the popup dead-click test was sweeping the "Refresh session" button in the share-view-link popup. That button's handler called `window.codenow.authSignOut()` on refresh failure, which navigated the renderer to `auth.html` and orphaned every test after it in the suite.
+
+### The single fix
+
+`__cnSessionRefresh` in `src/renderer/app.js` no longer auto-signs-out on failure. Instead, it shows a toast and leaves the user on the page with the visible "Sign in again" button already next to it. Better UX (auto-navigation away from where you are is hostile) AND removes the cascade that was breaking `browser.bottom-tab-renders`, `jira.studio-context-bridge`, and `deploy.k8s-target-selector-renders`.
+
+### Belt-and-suspenders
+
+In `tools/smoke/cases.mjs`:
+- `shareViewLink.noChangeOk` now allowlists `'Sign in again'` and `'Refresh session'` (both produce real user-visible feedback — navigation and toast — that's invisible to a same-document snapshot diff).
+- Added a **navigation guard** in the popup-button loop: if a click ever navigates the renderer, the test logs an actionable error AND navigates back to `index.html` so the rest of the suite isn't silently broken.
+
+In `tools/smoke/runtime.mjs`:
+- New noise pattern for a pre-existing `Unexpected end of input | SyntaxError` page error from one of the `openShareViewLinkModal` IPC paths in the no-token fixture. Production swallows it in a try/catch.
+
+### New smoke case for v0.1.29
+
+`trial-pill.renders-and-hides` locks in:
+- The pill DOM exists in the topbar
+- `openTrialUpgrade()` handler is defined
+- `window.codenow.paywallOpenCheckout` bridge is exposed
+- The inline `onclick` attribute on `#trial-pill` actually calls `openTrialUpgrade`
+- The pill correctly switches color (amber at 4 days left) and text format ("Day N of 7")
+- The pill hides cleanly when the trial ends
+
+## Sidecar — still production-ready
+
+No changes to the v0.1.28 sidecar stack. The Docker image rebuilds on every release tag, so `karlmehta/codenow-sidecar:0.1.29` and `:latest` publish automatically alongside this release. SLSA provenance + SPDX SBOM attestations are part of the image manifest as in v0.1.28.
+
+The CI also got a Node 24 forward-compatibility opt-in (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`) to silence the GitHub deprecation warning ahead of the 2026-06-02 switch.
+
+## Upgrade path
+
+- v0.1.28 users get this automatically via the in-app updater on next launch.
+- For trial users currently in days 1-7: the new pill appears immediately after the auto-update.
+- For trial users on day 8+ who hit the paywall: clicking Upgrade now actually opens a working Stripe checkout (was returning "Billing is not configured yet" for 10 days due to the empty env var — see Stripe section above).
+
+Mac DMG signed by Developer ID Application: PREDIXTIONS INC and notarized — `spctl -a -t open` returns `accepted, source=Notarized Developer ID`.
+
+## What's queued
+
+- Multi-tenant sidecar (one binary mirroring multiple projects)
+- SBOM signing via cosign (the Docker manifest already attaches SLSA + SPDX attestations; cosign signing is the next layer)
+- Custom CA support for corporate TLS-interception envs
+- Token rotation API
+- `project_view_links` UUID migration so `team_members` can finally be dropped
+- Webpack/vite bundle of Monaco so the built `.app` works without the source-load hack
