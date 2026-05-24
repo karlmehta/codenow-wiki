@@ -11,18 +11,23 @@ import { Cards, Callout } from 'nextra/components';
 <Callout type="info">
   **v0.1.29 is live — public launch.** New this cycle: visible **7-day trial pill** + **Stripe checkout** in the topbar, **141/141** smoke green, all four pre-existing test fails root-caused + fixed. [Read the release notes →](/release-notes/v0-1-29)
 
-  **10 things CodeNow does that Cursor, Windsurf, and Codex don't:**
+  **15 things CodeNow does that Cursor, Windsurf, and Codex don't:**
 
-  1. **Dual-mode IDE** — Developer mode for engineers, Business mode for PMs / ops / sales / legal. Same window, same project state.
-  2. **Multi-model side-by-side** — Claude, Codex, Gemini, Aider, Copilot in one window, BYOK, switch in one click.
-  3. **All four SDK scaffolds** — Claude Agent SDK (TS + Python), Cursor SDK, Microsoft Agent Framework, Google ADK. Build for any provider.
-  4. **CodeNow Sidecar (Mode C, v0.1.28)** — push skills + guardrails into agents deployed in your own AWS/GCP/Azure cloud. Outbound HTTPS only; no inbound firewall holes. See [Deployment modes →](/concepts/deployment-modes).
-  5. **Live Agent Replay** — every agent run captured as JSONL, replayable, forkable to current code with diff.
-  6. **Skillify + Guardrails** — business users train any agent from a no-code UI, enforced as system prompt on every invocation.
-  7. **CRDT pair-programming (v0.1.28)** — real cursors, real-time edits in the same buffer. No screen-share. See [Pair programming →](/concepts/pair-programming).
-  8. **JIRA → multi-model context** — click a ticket, full context (summary, priority, labels, description) injects into every selected agent.
-  9. **Embedded browser panel** — AI navigates, screenshots, clicks, evaluates JS in a real WebContentsView. Locally, no cloud computer-use service.
-  10. **One-click deploy** — Vercel / AWS / Azure / GCP / Kubernetes from inside the IDE, with a signed TrustScore artifact + GitHub Action wrapper.
+  1. **Multi-project tabs in one window** — open every codebase you work in side-by-side. Each tab keeps its own AI model, MCP connections, terminal, agent state. The others are all one-project-per-window.
+  2. **Dual-mode IDE** — Developer mode for engineers, Business mode for PMs / ops / sales / legal. Same window, same project state.
+  3. **Multi-model side-by-side** — Claude, Codex, Gemini, Aider, Copilot in one window, BYOK, switch in one click.
+  4. **All four SDK scaffolds** — Claude Agent SDK (TS + Python), Cursor SDK, Microsoft Agent Framework, Google ADK. Build for any provider.
+  5. **CodeNow Sidecar (Mode C, v0.1.28)** — push skills + guardrails into agents deployed in your own AWS / GCP / Azure cloud. Outbound HTTPS only; no inbound firewall holes. See [Deployment modes →](/concepts/deployment-modes).
+  6. **Live Agent Replay** — every agent run captured as JSONL, replayable, forkable to current code with diff.
+  7. **Skillify + Guardrails** — business users train any agent from a no-code UI, enforced as system prompt on every invocation.
+  8. **CRDT pair-programming (v0.1.28)** — real cursors, real-time edits in the same buffer. No screen-share. See [Pair programming →](/concepts/pair-programming).
+  9. **JIRA → multi-model context** — click a ticket, full context (summary, priority, labels, description) injects into every selected agent.
+  10. **Embedded browser panel** — AI navigates, screenshots, clicks, evaluates JS in a real WebContentsView. Locally, no cloud computer-use service.
+  11. **One-click deploy** — Vercel / AWS / Azure / GCP / Kubernetes from inside the IDE, with a signed TrustScore artifact + GitHub Action wrapper.
+  12. **Per-project MCP connections** — 49 vetted integrations (GitHub, JIRA, Slack, HubSpot, Salesforce, Postgres, Stripe…) scoped per project. The others only support global MCP.
+  13. **Anonymous read-only share link** — mint a URL, recipient clones and opens the project in viewer mode. No sign-in required. Revoke any time.
+  14. **Mobile companion** at [codenow.pro/app](https://codenow.pro/app) — review runs, approve trust gates, edit skills from your phone. PWA, no app store.
+  15. **Agent21 marketplace publish** — one-click bundle (prompts + evals + tools + guardrails) and list your agent for sale. Built-in monetization.
 </Callout>
 
 <Callout type="info">
