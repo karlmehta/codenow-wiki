@@ -4,4 +4,5 @@ export default {
   runs: 'Runs and replay',
   manifests: 'Manifests and provenance',
   'mental-model': 'The 2026 Agent (mental model)',
+  'pair-programming': 'Pair programming',
 };
