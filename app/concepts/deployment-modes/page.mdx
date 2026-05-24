@@ -1,0 +1,235 @@
+---
+title: Deployment modes for Skillify
+---
+
+# Deployment modes for Skillify
+
+Where your agent actually runs determines whether CodeNow's Skillify,
+Guardrails, and Workforce features can push behavior to it. This page is
+the honest map of which mode supports what, and where the gaps are.
+
+Three modes are supported (or planned). Each has different security
+properties; pick the one that matches how your agent is actually
+deployed.
+
+| Mode | Where the agent runs | Skill push | Run import | Today |
+|---|---|---|---|---|
+| A — **Localhost** | Developer's laptop, via CodeNow | Yes (on every call) | Yes (full JSONL) | Shipping |
+| B — **Agent21 / partner host** | Partner-managed runtime (e.g. Sophia, Agent21) | Yes (via partner API) | Yes (via partner API) | Shipping for Agent21; Sophia in beta |
+| C — **Customer's own cloud** | AWS / GCP / Azure VPC under customer security | Yes — via **Sidecar** | Yes — via **Sidecar** | Sidecar **planned**, see below |
+
+## How "Skillify" actually works at the wire level
+
+When a CodeNow user (PM, ops, sales) trains a skill in Business mode:
+
+1. The skill is written to `<project>/.codenow/skills.json` and to Supabase.
+2. Guardrails (data scopes, action allowlists, TrustScore threshold) are
+   stored alongside.
+3. On every invocation routed through CodeNow, the desktop composes the
+   skills + guardrails into a **system prompt** and prepends it to the
+   user's prompt before the agent runs.
+
+The critical constraint: **skills only take effect on invocations CodeNow
+itself proxies.** A Slack bot, cron job, or your customer's own product
+traffic that calls the agent directly never sees those system-prompt
+additions. That's the architectural reality you have to design around.
+
+## Mode A — Localhost
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Developer's machine                                  │
+│                                                      │
+│   ┌────────────┐      ┌─────────────────┐           │
+│   │  CodeNow   │──────│ agent.ts /      │           │
+│   │  Desktop   │      │ Python process  │           │
+│   └────────────┘      └─────────────────┘           │
+│        │                       │                     │
+│        │  reads / writes:      │ invokes via         │
+│        ▼                       │ child process or    │
+│   ~/.codenow/skills.json       │ HTTP loopback       │
+│   ~/.codenow/exec-agents.json  │                     │
+└─────────────────────────────────────────────────────┘
+```
+
+`exec-agents.js source.type === 'local'`. The agent manifest lives under
+`<project>/.codenow/agent-studio/agents/`. The desktop's main process is
+the runtime, so skills + guardrails apply on every call — they're read
+fresh from disk before each invocation.
+
+**Good for:**
+- Solo developers iterating on prompts + skills locally
+- Demoing the full Skillify → Guardrails → Run loop
+- CI smoke tests of agent behavior under changing guardrails
+
+**Bad for:**
+- Production traffic — laptops aren't 24/7, and you don't want PMs'
+  laptops in the critical path of customer queries
+
+## Mode B — Agent21 / partner host
+
+```
+┌──────────────────┐      push skills      ┌──────────────────────┐
+│ CodeNow Desktop  │ ────────────────────▶ │ Agent21 Control Plane│
+└──────────────────┘                       └──────────┬───────────┘
+                                                      │ applies on
+                                                      │ every invocation
+                                                      ▼
+                                           ┌──────────────────────┐
+                                           │ Agent runtime        │
+                                           │ (Sophia, etc.)       │
+                                           └──────────────────────┘
+       Customer's Slack / Web ─────────────▶ Agent runtime
+       (or any external caller)              (still applies skills!)
+```
+
+CodeNow has a contract / API with the partner host. When you publish an
+agent to Agent21, the partner stores the agent's manifest + skills +
+guardrails in their own control plane. Their runtime reads from that
+control plane on every invocation — *regardless of who triggered the
+agent*.
+
+This is the only mode where **every** production call honors the skills
+you train. The trade is: your agent has to live on a partner runtime, and
+you depend on that partner's SLA + uptime.
+
+**Working examples:**
+- Agent21 — fully wired in v0.1.21+
+- Sophia — beta integration (handshake live, partner-side enforcement
+  rolling out)
+
+**Bad for:**
+- Customers who can't move their agent off their own cloud (compliance,
+  data residency, latency)
+
+## Mode C — Customer's own cloud (Sidecar)
+
+The case you're asking about: the agent runs in the customer's AWS / GCP /
+Azure VPC under strict security. No inbound from CodeNow, restricted
+outbound, no chance of CodeNow proxying invocations.
+
+The **CodeNow Sidecar** closes the gap. The customer installs a small
+container or binary inside their VPC. It opens *one* outbound long-poll
+to `codenow.pro/api/sidecar/pull` and serves skills + guardrails over
+loopback to the agent.
+
+```
+┌──────────────────┐      push skill        ┌──────────────────────┐
+│ CodeNow Desktop  │  ──────────────────▶   │  codenow.pro         │
+└──────────────────┘                        │  /api/sidecar/push   │
+                                            └──────────┬───────────┘
+                                                       │ enqueue for
+                                                       │ customer N
+                                                       ▼
+                                            ┌──────────────────────┐
+                                            │  Push queue (per     │
+                                            │  customer ID)        │
+                                            └──────────┬───────────┘
+                                                       │
+                ┌──────────────────────────────────────│ outbound HTTPS
+                │ Customer VPC                          │ long-poll
+                │                                       ▼
+                │  ┌──────────────────┐    pulls    ┌──────────────┐
+                │  │ Agent runtime    │◀────────────│ CodeNow      │
+                │  │ (Python / Node)  │  localhost  │ Sidecar      │
+                │  └──────────────────┘   :8721     │ (container)  │
+                │           ▲                       └──────────────┘
+                │           │ reads at every invocation:
+                │           │   GET http://localhost:8721/skills
+                │           │   GET http://localhost:8721/guardrails
+                └─────────────────────────────────────────────────────
+```
+
+### Why this works under strict security
+
+Three properties enterprise security teams already accept:
+
+1. **One outbound HTTPS connection** to a known, allow-listed host
+   (codenow.pro). No inbound holes. Same shape as the Datadog Agent,
+   Grafana Alloy, Fluent Bit, etc.
+2. **Localhost-only data path** to the customer's agent. The sidecar
+   never accepts inbound from outside the VPC.
+3. **Customer-controlled scope.** The sidecar pulls only the
+   project / agents the customer has explicitly enrolled. No catch-all
+   credentials inside their VPC.
+
+### What CodeNow ships in this mode (planned)
+
+- **Sidecar binary** — published as a container image + native binaries
+  (Linux amd64/arm64 first; Windows / macOS later). ~15 MB, no
+  dependencies.
+- **Sidecar config** — single YAML file or env vars: a join token, the
+  agent IDs to mirror, and an optional egress URL allowlist (defaults to
+  `codenow.pro` only).
+- **Agent SDK shim** — drop-in modules for the four supported harnesses
+  (Claude Agent SDK, Cursor SDK, Microsoft Agent Framework, Google ADK)
+  that read skills + guardrails from `http://localhost:8721/` and compose
+  them into the system prompt on every invocation.
+- **Push API** — `POST /api/sidecar/push` from CodeNow Desktop enqueues
+  per-customer changes; long-poll on the sidecar side delivers them
+  within seconds.
+- **Pull API** — `GET /api/sidecar/pull` (long-poll) returns queued
+  changes for the calling sidecar's customer token.
+
+### Status
+
+**Sidecar is planned, not shipping.** Today, Mode C is **observability-only** — if
+you import an agent's runs (manifest + JSONL upload via CLI or a small
+emitter the customer runs in their stack), CodeNow renders them under
+**Runs** in the Agents panel. Skills you train in Business mode **do not
+flow back** to the agent until the sidecar lands.
+
+The push side will land in two phases:
+
+- **Phase 1** (v0.1.30 target): sidecar binary + push/pull API for skills.
+  Single customer per sidecar. Static config.
+- **Phase 2** (later): multi-tenant sidecar + dynamic enrollment + SBOM
+  signing + audit log forwarded back to CodeNow.
+
+If you need this before it ships, drop a note in
+[the wiki repo's issues](https://github.com/karlmehta/codenow-wiki/issues)
+so we can prioritize against actual demand.
+
+## Importing agents in Mode C
+
+The same constraint applies to import. CodeNow can't reach into the
+customer's VPC to discover what's running. Three honest paths today:
+
+1. **Manifest upload** — the customer hands you a JSON manifest describing
+   the agent (name, function, prompts, expected I/O). CodeNow shows it
+   in the Catalog. Run history is empty until they emit some.
+2. **Runs emitter** — a tiny library (~50 LOC per harness) the customer
+   adds to their agent that writes JSONL to a path the sidecar (or a
+   periodic uploader) ships to CodeNow. Runs appear in the Runs tab;
+   Replay works.
+3. **Agent21 / partner re-deploy** — if the customer is willing to move
+   their agent off their cloud onto a partner runtime, you get Mode B
+   behavior end-to-end. Usually a non-starter for compliance reasons.
+
+## Quick decision tree
+
+```
+Q: Where does the agent actually run?
+│
+├─ On my laptop while I'm developing it
+│      → Mode A. Local invoker. Full Skillify.
+│
+├─ On Agent21, Sophia, or another partner host
+│      → Mode B. Partner API handles skill push. Full Skillify.
+│
+└─ In my company's own AWS/GCP/Azure under strict security
+       → Mode C. Wait for Sidecar (v0.1.30) for true skill push.
+         Today: import manifests + runs only; Skillify changes don't reach
+         the agent until you install the sidecar.
+```
+
+## What this means for positioning
+
+CodeNow's marketing message is *"oversee, train, guardrail, supervise"*.
+That message is honest in Modes A and B today. In Mode C, the **oversee**
+half is honest now (you can watch runs); the **train / guardrail** half
+requires the sidecar to ship. Talk about it that way.
+
+When in doubt, ask: *"Does the agent's runtime ever call codenow.pro to
+fetch its system prompt?"* If yes (Modes A, B, or Mode C with sidecar):
+Skillify works. If no: Skillify is observability only.
