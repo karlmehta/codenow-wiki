@@ -1,4 +1,6 @@
 export default {
+  'v0-1-28': 'v0.1.28 — Sidecar (Mode C) · Pair-program consolidation · Workforce humans',
+  'v0-1-27': 'v0.1.27 — Browser · Mobile PWA · JIRA→Studio · K8s · GSD',
   'v0-1-22': 'v0.1.22 — Agent-card lifecycle bridges · Actionable fork errors',
   'v0-1-21': 'v0.1.21 — Auth self-heal · Read-only share links · Mac Intel',
   'v0-1-19': 'v0.1.19 — Terminal lockup fix',

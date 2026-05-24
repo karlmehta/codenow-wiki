@@ -1,0 +1,138 @@
+---
+title: v0.1.28 — Sidecar (Mode C) · Pair-program consolidation · Workforce humans
+---
+
+# v0.1.28 — Sidecar, pair-programming, team consolidation
+
+**Released 2026-05-24.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.27 is automatic on next launch.
+
+Headline: agents running in your own AWS/GCP/Azure VPC can now receive Skillify and Guardrail updates without inbound firewall holes. Plus the team-invite stack — two parallel systems that had been confusing users — is now one modal, one flow.
+
+## Sidecar (Mode C) — production ready
+
+See [Concepts → Deployment modes](/concepts/deployment-modes) for the full architecture.
+
+The CodeNow Sidecar runs **inside the customer's cloud**, opens a single outbound long-poll to `codenow.pro`, and serves the latest skills + guardrails to the agent over loopback. Same security shape as the Datadog Agent, Grafana Alloy, Fluent Bit — the pattern enterprise security teams already accept.
+
+Three install paths ship today:
+
+```bash
+# Bare VM with hardened systemd
+curl -fsSL https://codenow.pro/sidecar/install.sh | \
+  sudo bash -s -- --token=codenow_sc_xxx --systemd --start
+
+# Docker
+docker run -d \
+  -e CODENOW_SIDECAR_TOKEN=codenow_sc_xxx \
+  -p 127.0.0.1:8721:8721 \
+  --read-only --cap-drop=ALL --security-opt no-new-privileges:true \
+  karlmehta/codenow-sidecar:0.1.28
+
+# Kubernetes
+kubectl create namespace codenow
+kubectl -n codenow create secret generic codenow-sidecar \
+  --from-literal=token=codenow_sc_xxx
+kubectl apply -f https://codenow.pro/sidecar/k8s.yaml
+```
+
+In CodeNow Desktop: **Business mode → Sidecars tab → "+ Mint sidecar"**. The token is shown exactly once — paste it into the install command above.
+
+### What ships in v0.1.28
+
+| Surface | Detail |
+|---|---|
+| Sidecar binary | `tools/sidecar/index.mjs` — Node.js 18+, zero external dependencies |
+| Endpoints (loopback) | `GET /health`, `/skills`, `/guardrails`, `/state`, `/metrics`, `/readyz`, `/livez`; `POST /runs` |
+| Endpoints (codenow.pro) | `POST/GET/DELETE /api/sidecar`, `GET /api/sidecar/pull` (25s long-poll), `POST /api/sidecar/heartbeat`, `POST /api/sidecar/runs` |
+| Audit-log forwarding | Sidecar forwards agent runs to CodeNow; tagged with `sidecar_id` so the Runs tab shows provenance. Closes the observability loop. |
+| Prometheus metrics | Counters: `pull_successes/failures/no_change`, `runs_accepted/forwarded/rejected/forward_errors`. Gauges: `skills`, `guardrails`, `uptime_seconds`. |
+| YAML config | `/etc/codenow-sidecar/config.yml` default; override via `--config=` or `CODENOW_SIDECAR_CONFIG`. Precedence: defaults → file → env → CLI flags. |
+| Hardened systemd | Runs as `codenow` user, `NoNewPrivileges`, `ProtectSystem=strict`, `RestrictAddressFamilies=AF_INET AF_INET6`, all capabilities dropped. |
+| Docker image | `karlmehta/codenow-sidecar:0.1.28`, multi-arch (amd64/arm64), Alpine + Node 20, non-root, `HEALTHCHECK` against `/livez`. |
+| Kubernetes manifest | Deployment + ClusterIP Service + NetworkPolicy. Liveness on `/livez`, readiness on `/readyz`, Prometheus scrape annotations. |
+| SDK shims | Drop-in `sidecar.{ts,py}` lands in scaffolds for all four harnesses — Claude Agent SDK (TS + Python), Cursor SDK, Microsoft Agent Framework, Google ADK. Each agent template composes the sidecar prompt automatically. |
+| Desktop UI | Business mode → Sidecars tab — mint + list + revoke + status pills (Connected / Waiting / Revoked) |
+
+### Deferred to v0.1.29+
+
+- Multi-tenant sidecar (one binary mirroring multiple projects). Today: run one sidecar per project on different ports.
+- SBOM signing via cosign (Docker image already attaches SLSA provenance + SPDX SBOM attestations from the GH Action build).
+- Custom CA support for corporate TLS-interception environments.
+- Token rotation API (today: revoke + re-mint).
+
+## Pair programming + team-invite consolidation
+
+See [Concepts → Pair programming](/concepts/pair-programming) for the end-to-end walkthrough with screenshots.
+
+Two parallel invitation systems (`team-*` and `collab-*`) collapsed into one lifecycle-rail Share modal. The "Team members" modal is gone. The user-pill **Invite team** menu item, the `⌘P` *Invite Teammates* command, and the editor topbar **Share** button all open the same modal.
+
+The modal teaches the flow:
+
+- **Intro / Repo** — header explains pair-programming + offers an inline GitHub-URL editor for the missing-URL case
+- **Invite a teammate** — email + role + Send invite + optional welcome message; help line tells the user what to expect ("They'll get an email with a link that opens this project in their CodeNow")
+- **Team (N)** — each member has a status pill (Owner / You / Joined) and non-owners get a **Pair →** button that starts a CRDT live session + copies a paste-ready Slack/email blurb for the teammate
+- **Pending (N)** — Email-sent pill + Resend / Copy link / × per row. Resend re-fires the transactional email without touching the row.
+
+Server-side:
+
+- New `POST /api/collab/email-invite` fires Resend after a row is created (the Share button finally sends real email — before this, you had to copy/paste the link yourself)
+- New `/join` public landing page resolves invite tokens and walks new users through signup + accept; old `/team/accept` page kept for backwards compat
+- Homepage + signup carry the pending invitation token through email confirmation so the accept loop completes automatically (extends 48b025b)
+
+Server cleanup:
+
+- Deleted 5 endpoints: `/api/team/{accept, audit, invitations, invite, members}`
+- Deleted 5 IPC handlers, 5 preload bridges, 13 renderer functions, the entire `#team-members-modal` DOM
+- Dropped 4 Supabase tables: `team_invitations`, `team_audit_log`, `team_channels`, `team_messages`. (`team_members` retained — `project_view_links` RLS still references it; UUID migration is on the v0.1.29+ list.)
+
+Net code change across the consolidation: **−742 LOC**, one door, one flow.
+
+## Workforce panel — no more channels
+
+Per Karl: *"we do not have channels so business mode referring to channels is a BUG."*
+
+The Workforce tab in Business mode now renders **people + agents side by side** — `project_members` from the same source the Share modal reads, plus the existing agent list. The Slack-style chat feature shipped in v0.1.8 release notes never carried real product weight; it's been ripped end-to-end:
+
+- DOM block + create-channel modal removed
+- `loadWorkforceChannels`, `renderWorkforceChannels`, `selectChannel`, `openChannel`, `submitChannelMessage`, `openCreateChannelModal`, `slackChannelButton`, `openSlackChannelMappingModal` all deleted
+- `team:list-channels` / `team:create-channel` / `team:list-messages` / `team:send-message` IPC + matching preload bridges removed
+- `/api/team/channels` + `/api/team/messages` deleted
+- `team_messages` + `team_channels` tables dropped
+- New runtime smoke case `workforce.humans-and-agents` asserts both the new shape AND the absence of the deleted DOM/functions — re-introducing channels fails fast
+
+## Auth silent-retry restored
+
+Phase 2 of the team-invite consolidation deleted `renderTeamMembersPanel`, which carried the silent-retry-on-auth-expired logic from `0a18f00` (the sleep-wake JWT-expiry fix from May 21). The replacement Share modal had no equivalent, so a stale token landed users on the **Sign in again** panel even though `authRefreshSession()` would have worked.
+
+Restored in `b648a2d`: both `openCollabModal` and `renderCollabPanel` now attempt `authRefreshSession()` once before showing the sign-in block, and `renderSessionExpiredBlock` exposes a "Refresh session" retry button. Caught by the screenshot rig before any real user hit it.
+
+## Other things in this batch
+
+- Browser control panel + mobile PWA companion (originally landed under v0.1.28 work in flight)
+- Enterprise compliance layer (secret managers, IAM, air-gap, SIEM)
+- GSD Phase 1 — auto-detect, badge, command palette, one-click install
+- GitHub Action wrapper at `codenow/deploy-action@v1`
+- K8s / Container adapter + Phase 2 trust runtime
+
+## Smoke
+
+- Static: 0 errors, 0 warnings
+- Runtime: **136 pass / 4 fail / 1 skip**. The 4 fails are pre-existing and unrelated to this release (shareViewLink Refresh-session dead click, browser bottom tab, JIRA context bridge, k8s `switchStudioTab` ref). New cases that landed: `workforce.humans-and-agents`, `pair-program.share-flow`, `team.invite-folded-into-share-modal`, `team.members-bridges-collab-only`, `team.share-modal-shows-known-state`, `sidecars.tab-and-bridges`.
+
+## Upgrade path
+
+- v0.1.27 users get this automatically via the in-app updater on next launch.
+- v0.1.5 → v0.1.7 users: download once manually from [codenow.pro/download/mac](https://codenow.pro/download/mac); subsequent versions auto-update.
+- Windows: [codenow.pro/download/windows](https://codenow.pro/download/windows)
+- Linux: [codenow.pro/download/linux](https://codenow.pro/download/linux)
+
+The Mac DMG is signed by Developer ID Application: PREDIXTIONS INC and notarized — `spctl -a -t open` returns `accepted, source=Notarized Developer ID`.
+
+## What's queued
+
+- Multi-tenant sidecar
+- SBOM signing (cosign-based supply-chain provenance on the Docker image)
+- Custom CA support for corporate TLS-interception
+- `project_view_links` UUID migration (so `team_members` can finally be dropped)
+- Stripe billing + tier enforcement in the desktop app
+- Webpack/vite bundle of Monaco so the built `.app` works without the source-load hack
