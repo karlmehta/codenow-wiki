@@ -1,0 +1,226 @@
+---
+title: Your first 10 minutes with CodeNow
+---
+
+# Your first 10 minutes with CodeNow
+
+If you've never opened a coding tool before — or you've used VS Code or Cursor but always felt like it was hiding something from you — this guide is for you.
+
+By the end of these 10 minutes, you'll have:
+- ✅ CodeNow installed and running
+- ✅ A real project open
+- ✅ Had your first actual conversation with **SMART-Code** — the AI assistant that lives inside CodeNow
+- ✅ Seen it read your code, find a bug, or write a small change for you
+
+No prior coding experience needed. We'll skip every step you don't absolutely need.
+
+> **Got 10 minutes? Go.** If anything is confusing as you read, that's our fault. Tell us at [hello@codenow.pro](mailto:hello@codenow.pro) — we'll rewrite that part.
+
+---
+
+## Minute 0–1: Install CodeNow
+
+Pick your computer and download:
+
+| Your computer | Download link |
+|---|---|
+| **Mac** (any from 2020 onward — Apple Silicon) | [codenow.pro/download/mac](https://codenow.pro/download/mac) |
+| **Mac** (older Intel from 2019 or earlier) | [codenow.pro/download/mac-intel](https://codenow.pro/download/mac-intel) |
+| **Windows** | [codenow.pro/download/windows](https://codenow.pro/download/windows) |
+| **Linux** | [codenow.pro/download/linux](https://codenow.pro/download/linux) |
+
+**Not sure which Mac you have?** Click the Apple logo (top-left) → "About This Mac." If it says "Apple M1," "M2," "M3," or "M4," pick Apple Silicon. If it says "Intel," pick Intel.
+
+Once the download finishes, install it like any other app:
+
+- **Mac:** open the `.dmg` file → drag CodeNow into your Applications folder → launch from Applications.
+- **Windows:** double-click `CodeNow-Setup.exe` and follow the prompts.
+- **Linux:** make the `.AppImage` executable and run it.
+
+> **You might see a warning** the first time on Mac ("CodeNow can't be opened because…"). That's macOS being cautious. Right-click the app → **Open** → **Open** the first time only. CodeNow is properly signed by Apple's notarization service — the warning is a standard one-time hoop, not a real problem.
+
+---
+
+## Minute 1–3: Open it and say hello to SMART-Code
+
+When CodeNow launches the first time, you'll see a sign-in screen. **Sign up** with your email (free — no credit card). You'll get a 30-day free trial with **50,000 tokens per day** to use SMART-Code, the built-in AI assistant.
+
+> **What's a token?** A token is roughly one word. So 50,000 tokens = about 50,000 words per day of back-and-forth with the AI. That's a LOT — enough for 50-100 normal conversations. You won't run out unless you're really hammering it.
+
+Once signed in, you'll see the main CodeNow window. Don't worry about all the buttons — we only need a few.
+
+### Find SMART-Code
+
+Look at the bottom of the window. You'll see a row of tabs:
+
+```
+TERMINAL · SMART-CODE · CLAUDE CODE · CODEX · GEMINI · BROWSER · OUTPUT · ...
+```
+
+**Click "SMART-Code."** That's your AI assistant. You should see a chat panel with a text box at the bottom.
+
+### Say hi
+
+Type into the box:
+
+> hello — are you ready?
+
+Press **Cmd+Enter** (Mac) or **Ctrl+Enter** (Windows/Linux). You'll see SMART-Code reply within a second or two, something like:
+
+> Hi! Yes — I'm ready. I can read files in your project, search for code, and answer questions about your codebase. What are you working on?
+
+**That's it.** You've just chatted with the bundled coding AI. No API key, no setup, no friction. The little tag at the top of the reply (`SMART-Code · Haiku`) tells you which AI brain answered — SMART-Code uses two (Claude Haiku and OpenAI GPT) and picks the right one automatically.
+
+> **Wait — what's Haiku?** It's the nickname for Anthropic's Claude Haiku 4.5, a fast and friendly AI. You'll see "GPT" tags too when SMART-Code picks OpenAI's GPT-5 Codex for harder questions. Both are bundled — you don't pick, SMART-Code does.
+
+---
+
+## Minute 3–5: Open a real project
+
+Now let's give SMART-Code something to actually look at. Two options:
+
+### Option A: Open one of your own projects (if you have one)
+
+If you already have a folder with code on your computer:
+
+1. In CodeNow, click the **+** button at the top (next to your project tabs)
+2. Pick the folder where your project lives
+3. Click **Open**
+
+The folder appears as a new tab and you can browse its files in the sidebar on the left.
+
+### Option B: Start fresh with a small sample (if you don't)
+
+If you don't have any code yet, do this in your computer's terminal (Mac: open the Terminal app; Windows: open PowerShell):
+
+```bash
+git clone https://github.com/sveltejs/realworld.git ~/Documents/sample-project
+```
+
+> **What's `git clone`?** It downloads a public project from the internet to your computer. We're picking a small real-world demo app called "realworld" — popular for tutorials. You can use any project though.
+
+Then in CodeNow, click **+** → pick the `sample-project` folder. Done.
+
+---
+
+## Minute 5–8: Ask SMART-Code about your code (the magic moment)
+
+This is where CodeNow gets fun. With your project open and SMART-Code in the bottom panel, try these:
+
+### Try 1 — Get an overview
+
+Type:
+
+> Give me a 5-sentence summary of what this project is and how it's organized.
+
+Watch what happens below the text box:
+
+```
+⏳ list_files: .
+✓ list_files: .
+⏳ read_file: README.md
+✓ read_file: README.md
+✓ read_file: package.json
+```
+
+These little **status pills** show SMART-Code actually looking at your project — listing the top folder, reading the README, peeking at `package.json` to see what tech you use. Then it gives you a real answer based on what it saw. **Not a guess.**
+
+### Try 2 — Find something specific
+
+Type:
+
+> Show me where login is handled.
+
+You'll see:
+
+```
+✓ grep_code: login
+✓ read_file: src/lib/api/login.js
+```
+
+SMART-Code searched your project for the word "login," found it, read the file, and now explains it — with the actual file path so you can open it yourself.
+
+### Try 3 — Ask "why"
+
+Pick any file in your sidebar (just click one). It opens in the editor in the middle. Now in SMART-Code, type:
+
+> Explain what's happening in the file I have open.
+
+SMART-Code knows what file you have open (because CodeNow tells it automatically). It'll read the file and walk you through what each section does — in plain English.
+
+### What just happened?
+
+SMART-Code is what's called an **agent**. It's not just a chatbot — it can DO things (read files, search code) before answering, so it gives you real answers about your actual code, not generic ones from its training memory.
+
+The little status pills are the agent showing its work. If you click on a pill, you can see what it found. No mystery.
+
+---
+
+## Minute 8–10: Try a few more things
+
+### Open the Terminal tab
+
+Click the **TERMINAL** tab at the bottom (it's the first one). You get a real shell — type `ls` (Mac/Linux) or `dir` (Windows) and you'll see your project's files listed.
+
+> **What's a "shell"?** It's the old-school text way of telling your computer to do things. `ls` says "list files." Don't worry about learning it — CodeNow has the terminal because professional developers use it constantly, but you can do most things without it.
+
+### Open Claude Code (if you have a Claude subscription)
+
+If you pay for Claude Pro, click **CLAUDE CODE** tab. CodeNow detects whether you've installed Anthropic's official `claude` command and either runs it for you or shows you the one-line install command. Same with **CODEX** (if you have ChatGPT Plus) and **GEMINI** (free).
+
+The difference: SMART-Code is bundled (we pay for it during your trial); these other tabs let you bring your OWN AI subscriptions if you prefer.
+
+### Look at the left sidebar
+
+The sidebar tabs (icons on the very left) include:
+
+- 📁 **Files** — browse your project
+- 🔍 **Search** — find text across all files (or press `Cmd+Shift+F`)
+- 🔌 **Connections** — connect SMART-Code to outside tools like GitHub, JIRA, Slack, Stripe
+- 🧩 **Extensions** — add more dev tools (like syntax highlighters)
+- 🌿 **Git** — see what files you've changed, ready to commit
+- 🤖 **Agents** — for advanced users who want to BUILD their own AI agents
+- ✅ **Tasks** — like a to-do list for AI work. Every time you ask SMART-Code to do something significant, you can save it as a Task with its own git branch.
+
+You don't need any of these on day 1. They're there when you grow into them.
+
+---
+
+## What to do next
+
+Pick whatever sounds most interesting:
+
+| You want to… | Go here |
+|---|---|
+| Understand SMART-Code more deeply | [SMART-Code explainer](/concepts/smart-code) |
+| Build your first real app | [Tutorials → Your first app](/tutorials/first-app) |
+| Connect GitHub / Slack / JIRA | [Connect — MCP](/connect) |
+| Understand what an "agent" actually is | [What is an agent?](/concepts/agents) |
+| See what's new | [Release notes](/release-notes) |
+
+## If you get stuck
+
+- The terminal looks empty, you can't type anywhere → click on the area, press a key. If still stuck, click another tab and come back. ([known issue, fix shipping in v0.1.36](/release-notes/v0-1-36))
+- SMART-Code says "Sign in to use SMART-Code Cloud" → your trial session lapsed. Click **Sign in** and re-authenticate.
+- "Quota exceeded" → you've used your 50K tokens today. Either wait until midnight UTC for it to reset, switch to **Local** mode (free + unlimited if you install Ollama), or upgrade to Pro for 500K/day.
+- Anything else weird → email us at [hello@codenow.pro](mailto:hello@codenow.pro). We read every message.
+
+---
+
+## A word for first-time developers
+
+Coding has a reputation as something only "real engineers" can do. That's outdated. In 2026, you can:
+
+1. Have a vague idea ("a contact form on my website")
+2. Tell SMART-Code in plain English
+3. Watch it write and explain real code
+4. Read along, ask "why does this line do that?" until you understand
+5. Use it, ship it, learn it
+
+The AI doesn't replace understanding — but it removes the part where you stare at a blank screen with no idea where to start. Every step now has a friend who can read your code WITH you.
+
+CodeNow is built for this. The whole IDE assumes you're learning while you build. SMART-Code's job is to make the learning curve a ramp, not a wall.
+
+Welcome. Have fun.
+
+— The CodeNow team
