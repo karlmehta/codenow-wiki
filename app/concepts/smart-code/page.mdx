@@ -1,0 +1,403 @@
+---
+title: SMART-Code — your coding assistant, explained from scratch
+---
+
+# SMART-Code — your coding assistant, explained
+
+If you're new to coding (or new to AI coding assistants), this page is for you. No jargon. No assumptions. Just an honest walkthrough of what SMART-Code is, what it can do for you in CodeNow today, and what's coming next.
+
+A quick orientation:
+- **CodeNow** is the IDE — the program you open on your laptop where you write code.
+- **SMART-Code** is the coding assistant *inside* CodeNow — the helper you can ask questions and have it actually look at your files to answer.
+
+Think of CodeNow as your kitchen and SMART-Code as a chef who lives in it.
+
+---
+
+## What SMART-Code actually does for you
+
+You type a question. SMART-Code reads the files in your project (just like a human teammate would) and answers based on what it actually saw — not what it guessed.
+
+Here's what that looks like in practice:
+
+### Example 1 — "Show me how login works"
+
+You open SMART-Code, type:
+
+> Show me how login works in this project.
+
+What happens behind the scenes:
+1. SMART-Code thinks: *"I need to find the login code first."*
+2. It searches your project for the word `login` (or similar).
+3. It finds three files: `src/auth.js`, `src/login-form.tsx`, `src/api/login.js`.
+4. It reads each one.
+5. Then it writes you a clear explanation, citing the actual file and line numbers.
+
+You see little **status pills** below the answer like `✓ grep_code: login` and `✓ read_file: src/auth.js` so you know what it looked at. **No black box.** No "trust me." If you click on a pill, you see a preview of what it read.
+
+### Example 2 — "Why does my test fail?"
+
+You paste your error message and ask:
+
+> Why is this test failing? Here's the error: `TypeError: Cannot read 'name' of undefined at parseUser`
+
+SMART-Code:
+1. Searches for `parseUser` across your project.
+2. Reads the file where it's defined.
+3. Reads the test file.
+4. Spots that the test passes `null` while the function expects an object.
+5. Suggests a one-line fix and tells you exactly which line to change.
+
+### Example 3 — "Build me a contact form"
+
+You're a first-time developer and you ask:
+
+> Build me a contact form with name, email, and a message field that sends to my email.
+
+SMART-Code:
+1. Looks at what your project already uses (React? plain HTML? Vue?).
+2. Reads any existing form for the style conventions.
+3. Writes the form code matching your project's style.
+4. Tells you which file to put it in.
+
+> **Today's honest limitation:** SMART-Code in v0.1.36 will write the code as a chat response and you copy/paste it into your file yourself. In v0.1.37 it'll write the file directly with your permission. See the v0.1.37 plan below.
+
+---
+
+## What's inside SMART-Code in v0.1.36
+
+Here's everything that ships today, explained in plain language. Don't worry about the technical names — the glossary at the bottom of this page explains anything that sounds confusing.
+
+### 1. Two AI brains, one assistant
+
+SMART-Code uses **two different AI labs** (Anthropic and OpenAI). Each is strong at different things:
+
+| AI brain | Best at | When SMART-Code uses it |
+|---|---|---|
+| **Claude (from Anthropic)** | Fast, clear answers to simple questions | "What does this function do?" · "Format this code" · "Explain useReducer" |
+| **GPT (from OpenAI)** | Careful thinking for hard problems | "Refactor my auth across 4 files" · "Find this race condition" · "Design a queue" |
+
+You don't have to choose. SMART-Code looks at your question and picks the right brain automatically. You can see which one answered — there's a little tag on each reply like `SMART-Code · Haiku` or `SMART-Code · GPT`.
+
+If you want to override and force one brain, there's a pill selector at the top of the panel: **Smart · Haiku · GPT-5**. Click whichever you want.
+
+> **Why this matters for you:** Other tools (like Cursor and Windsurf) make you remember to switch models depending on what you're asking. That's exhausting. SMART-Code does it for you so you can focus on the work.
+
+### 2. It can actually read your code
+
+This is the big one. SMART-Code is **not just a chat window**. It can:
+
+- **Read a specific file** (you mention `src/auth.js`, it reads it)
+- **List what's in a folder** (so it can discover what files exist)
+- **Search your whole project** for a word, name, or pattern
+
+Why this matters: imagine asking a friend "what does the login button do?" If your friend has never seen your project, they have to guess. If they can open the file, they can give you a real answer. SMART-Code is the friend who can open the file.
+
+**Safety guardrails** — what SMART-Code is NOT allowed to read:
+- Your `.env` files (where you keep secret passwords and API keys)
+- Your `.ssh` folder (where you keep keys for connecting to servers)
+- Your `.aws`, `.docker`, `.netrc` folders (more secrets)
+- Anything called `id_rsa` or `id_ed25519` (private keys)
+- `node_modules` (these are third-party libraries — huge and boring)
+- `.git` internals
+- `package-lock.json` and `yarn.lock` (huge auto-generated files)
+
+It can ONLY read files inside the project folder you have open. It can't read files anywhere else on your computer.
+
+### 3. It knows about your project automatically
+
+Every time you start a chat, SMART-Code **automatically reads three things** so it doesn't have to ask:
+
+1. **Your project's `CLAUDE.md` file** if you have one. This is a special file where you write down "here's what this project is, how it's organized, what conventions we follow." Like a welcome doc for new contributors. SMART-Code reads it so it understands your style from the start.
+2. **The file you currently have open** in the editor. So if you ask "fix the bug here," it knows what "here" means.
+3. **The list of folders at the top of your project**. Like a quick map.
+
+You don't have to paste any of this into chat. SMART-Code grabs it on its own, every turn.
+
+> **If you don't have a CLAUDE.md yet:** that's fine, SMART-Code still works. But if your project has any conventions worth knowing ("we use TypeScript," "tests live next to the file they test," "we deploy to Vercel"), writing them in `CLAUDE.md` makes every SMART-Code answer better. Many open-source projects already have one — look at the root of your folder.
+
+### 4. It adapts to what you're asking
+
+SMART-Code looks at your question and switches into the right "mode":
+
+| If you ask about… | SMART-Code's mode | What that means |
+|---|---|---|
+| Writing a test (`test`, `spec`, `jest`, `vitest`, `pytest`…) | **Test-writing** | It reads an existing test in your project first to copy the style |
+| Refactoring code (`refactor`, `migrate`, `architect`, `extract`…) | **Refactor** | It plans before acting; finds every place the code is used before changing |
+| Debugging (`debug`, `why`, `race condition`, `root cause`, `crash`…) | **Debug** | It traces through the code carefully, looking for root causes not workarounds |
+| Explaining (`explain`, `what does`, `how does`…) | **Explain** | It gives a concise answer with one-sentence summary first, then details |
+
+This happens silently — you don't have to pick. Just ask your question normally.
+
+### 5. You can see exactly what it's doing
+
+Below every SMART-Code answer, there are little **status pills** showing the tools it used:
+
+```
+✓ grep_code: parseUser
+✓ read_file: src/utils/user.js
+✓ read_file: tests/user.test.js
+```
+
+- **⏳ amber** = currently running
+- **✓ green** = finished successfully
+- **⚠ red** = something went wrong (it'll tell you what)
+
+Hover over a pill to see a preview of what it found. This is the opposite of a black box.
+
+### 6. It runs as a back-and-forth conversation
+
+When you ask a hard question, SMART-Code doesn't just answer once and stop. It can:
+
+1. Read a file
+2. Realize it needs to read another file
+3. Read that
+4. Search for something
+5. Then finally write you a complete answer
+
+You see this happen live — each step shows up as a status pill. The whole thing takes 5-30 seconds depending on the question.
+
+**Safety limit:** SMART-Code can use tools up to 10 times in a row per question. If your question requires more than that, it stops and gives you what it has — so it can't get stuck in an infinite loop and burn through your free token allowance.
+
+### 7. Two ways to run SMART-Code
+
+You can pick between two backends — same agent, different engine room:
+
+| Mode | What it is | Who it's for |
+|---|---|---|
+| **Cloud** (default) | We host the AI on our servers. You get 30 days free with 50,000 tokens per day across both brains. Then $9.99/mo. | Anyone — works on any laptop, no setup |
+| **Local** | The AI runs on your own laptop using a free tool called Ollama. No internet needed once installed. Unlimited and free forever. | Privacy-focused users, developers with powerful laptops (16GB+ RAM recommended) |
+
+Switch any time with the **Cloud / Local** pills at the top of the SMART-Code panel.
+
+> **What's a token?** Roughly, a token is a chunk of text the AI processes. As a rule of thumb, 1 word ≈ 1.3 tokens. 50,000 tokens/day is enough for ~50-100 normal coding conversations.
+
+---
+
+## What SMART-Code can't do yet (honest)
+
+In v0.1.36, SMART-Code can **read** your code but can't **change** it. If it suggests an edit, you copy/paste it into your file yourself.
+
+It also can't:
+- Run your tests automatically
+- Run shell commands (like `npm install` or `git commit`)
+- Save its conversation between app restarts (your chat clears when you close the tab)
+- Be different per provider for tool use (today, when SMART-Code needs to use tools, it always uses Claude — even if Smart mode initially picked GPT)
+- Show you a per-tool token breakdown in the usage meter
+
+All of these are coming in v0.1.37. Here's the plan.
+
+---
+
+## What's coming in v0.1.37
+
+Five upgrades that turn SMART-Code from a "read-only research assistant" into a full coding partner.
+
+### 1. Edit files for you (with your permission first)
+
+Today: SMART-Code writes the new code in chat. You copy/paste it into your file.
+
+In v0.1.37: SMART-Code will **directly edit your file** — but only after you click **Approve**. You'll see a clear diff (the old code in red, the new code in green) and you decide whether to apply it.
+
+Why "with permission first"? Because the AI is sometimes wrong, and you should never let a robot silently change your code. The approval step is your safety net.
+
+It will also be able to:
+- **Create new files** (you approve)
+- **Delete files** (you approve — with a warning if it looks important)
+- **Run a shell command** like `npm install react` (you approve — with the command shown clearly so you know what it'll do)
+
+There will be **three permission modes** (a pill at the top of the IDE — already exists, will become functional):
+
+| Mode | What it means |
+|---|---|
+| **Confirm** | Every action asks you first. Best for new users learning what the AI does. |
+| **Safe** | Read tools (read_file, list_files, grep_code) just run. Write/delete/shell ask first. Best balance for most people. |
+| **Full** | All tools run without asking. Fastest but riskiest — use only when you trust what you've asked for. |
+
+### 2. GPT can use tools too
+
+Today: when SMART-Code needs to use tools, it always uses Claude. If your question would normally route to GPT (for depth), but SMART-Code needs to read a file, it falls back to Claude.
+
+In v0.1.37: GPT will also be able to use tools. Smart routing stays — but tool-using turns can stay on whichever brain Smart picked.
+
+Why this matters: GPT is better at multi-file refactors. Today, those have to go through Claude because of the tool limitation. Tomorrow, you get both: GPT's depth AND tool use.
+
+### 3. Your conversation survives
+
+Today: close the SMART-Code tab and your chat is gone forever.
+
+In v0.1.37: every conversation gets saved (on our servers, tied to your account). You can:
+- Reopen any past conversation from a history dropdown
+- Continue where you left off, even after restarting CodeNow
+- Search through past conversations
+- Share a conversation as a link (your code stays private; only the chat is shared)
+
+### 4. Better usage tracking
+
+Today: the daily meter shows your total token use ("8.2K of 50K used today").
+
+In v0.1.37: you'll see a breakdown:
+- How many tokens went to Claude vs GPT
+- How many were "cached" (cheap repeat-reads) vs "fresh" (full cost)
+- Which tools you used most
+- A weekly trend so you can see if you're a heavy user
+
+This helps you understand whether you actually need to upgrade to Pro ($19/mo for 10× the daily cap) or whether free is enough for you.
+
+### 5. Run your code, not just read it
+
+Today: SMART-Code can't run anything on your computer.
+
+In v0.1.37: SMART-Code can (with your approval):
+- **Run your tests** — `npm test`, `pytest`, etc. — and read the output to find what failed
+- **Run a quick script** — for example, run a one-liner that summarizes your CSV file
+- **Check if your code compiles** — catch errors before you push
+
+This is the difference between a study buddy and a TA who can actually grade your work.
+
+---
+
+## How to get the most out of SMART-Code
+
+A few tips, especially if you're new:
+
+### 1. Ask follow-up questions
+
+SMART-Code remembers what you said earlier in the conversation. If the first answer is too long or too short, just say:
+
+- "Make that shorter."
+- "Show me a real example."
+- "What about edge cases?"
+- "Can you draw it as a diagram?"
+
+### 2. Be specific about WHERE
+
+Instead of: *"What does my code do?"*
+Better: *"What does `src/components/Cart.jsx` do?"*
+
+The more specific you are about which file or function, the less time SMART-Code spends searching, and the better the answer.
+
+### 3. Paste error messages exactly
+
+If you have an error, copy/paste the full text. SMART-Code can usually identify the cause from a single error line — sometimes immediately, without needing to read your code.
+
+### 4. Ask "why" not just "what"
+
+- ✗ "Fix this bug"
+- ✓ "Why is this happening, and what's the smallest change to fix it?"
+
+The second prompt gives you both a fix AND the understanding to fix similar issues yourself next time. That's how you learn.
+
+### 5. Write a `CLAUDE.md`
+
+If you're going to use SMART-Code more than once on the same project, spend 5 minutes writing a `CLAUDE.md` file in your project root. Include:
+
+- What this project does (1-2 sentences)
+- Your tech stack (e.g., "Next.js, TypeScript, Tailwind, Supabase")
+- Any conventions you follow ("we use kebab-case for files," "tests go next to the file")
+- Anything that's surprising about the codebase ("auth lives in middleware, not the routes")
+
+Every SMART-Code answer after that will be better.
+
+---
+
+## Glossary
+
+Terms that appeared above, explained in plain language.
+
+**Agent** — A computer program that can take actions on your behalf, not just answer questions. SMART-Code is an agent because it can read your files (an action) before answering, not just respond from memory.
+
+**Anthropic** — The AI company that makes Claude.
+
+**API key** — A secret password that lets a program access an AI service. Like a key to your house, but for software. SMART-Code Cloud doesn't need one from you — we use ours.
+
+**Black box** — A system that gives you results without showing you how it got them. SMART-Code is *not* a black box because you can see every file it read.
+
+**Cache / Cached** — When the AI re-uses something it already computed instead of computing it fresh. Cached results are much cheaper. SMART-Code automatically caches your project context so repeat questions cost almost nothing.
+
+**Chat completion** — The technical name for when an AI generates a text response to your question. Each "completion" is one back-and-forth.
+
+**Claude** — The AI brain made by Anthropic. SMART-Code uses Claude Haiku 4.5, the fast version. Good at quick clear answers.
+
+**CLAUDE.md** — A plain text file in your project root that describes your project. SMART-Code reads it automatically so it understands your conventions. Optional but recommended.
+
+**Cloud** — A computer somewhere on the internet (not yours). SMART-Code Cloud runs the AI on our cloud computers. Your code is sent to us and to the AI provider, processed, then results come back.
+
+**Codex** — OpenAI's family of code-focused AI models. SMART-Code uses GPT-5 Codex via OpenAI's API.
+
+**Daily quota / Daily limit** — The maximum number of tokens you can use in a 24-hour period. Resets every day at midnight UTC.
+
+**Diff** — A side-by-side comparison showing what changed. Red = removed, green = added.
+
+**Edge cases** — Unusual situations that "normal" code might miss. For example, what does your function do if the user types an empty string? Or a really long string? Or weird characters?
+
+**File path** — The address of a file on your computer. Like `src/auth.js` (relative — inside the current project) or `/Users/karl/projects/myapp/src/auth.js` (absolute — full address).
+
+**GPT** — OpenAI's AI brain. SMART-Code uses GPT-5 Codex (the coding-tuned version), good at deeper thinking for harder problems.
+
+**grep** — A classic command-line tool that searches for a word or pattern in many files. SMART-Code has a `grep_code` tool that does the same thing.
+
+**IDE** — Integrated Development Environment. Fancy name for the program where you write code. CodeNow is an IDE.
+
+**Local** — The opposite of Cloud — running on your own laptop, not someone else's computer. Local mode is private (nothing leaves your laptop) but requires a powerful enough laptop to run the AI itself.
+
+**Model** — A trained AI brain. Claude Haiku 4.5, GPT-5 Codex, Gemini Flash, llama3 — these are all models. Different models have different strengths, speeds, and prices.
+
+**MCP** — Model Context Protocol. A standard way for AI tools to connect to outside services (like GitHub, Slack, Postgres). SMART-Code can use MCP connections you've set up in CodeNow.
+
+**Ollama** — A free tool that lets you run AI models on your own laptop. SMART-Code Local mode uses Ollama.
+
+**OpenAI** — The AI company that makes GPT and Codex.
+
+**Patch** — A change to code, described in terms of what lines to add, remove, or modify. When SMART-Code suggests an edit, that suggestion is a patch.
+
+**Permission mode** — How much SMART-Code is allowed to do without asking. Three modes coming in v0.1.37: Confirm (asks everything), Safe (asks before changing anything), Full (just does it).
+
+**Prompt** — The text you send to the AI. Your question, your code, your context — all of it together is the prompt.
+
+**Pull request (PR)** — A proposed change to code in a project. Common on GitHub. Smart-Code doesn't do these today; planned for v0.1.38+.
+
+**Race condition** — A bug that only happens when two things run at almost the same time. Notoriously hard to find — SMART-Code's debug skill helps with these.
+
+**Refactor** — Restructuring code without changing what it does. Like rearranging furniture in your house without buying new stuff. SMART-Code has a Refactor skill that plans before changing.
+
+**Regex / Regular expression** — A pattern for matching text. For example, `\d+` matches "one or more digits." SMART-Code uses some regexes internally to detect your intent (test? refactor? debug?). You don't need to know regexes to use SMART-Code.
+
+**Render / Rendering** — Drawing something on the screen. When SMART-Code shows you a chat message, that message is "rendered" in the chat area.
+
+**Skill** — In SMART-Code, a small extra instruction added to the AI's brain based on what you're asking. Like adding "speak in legal terms" to a lawyer's instructions. Five skills today: test-writing, refactor, debug, explain, general.
+
+**Smart routing** — SMART-Code's logic for picking between Claude and GPT automatically based on your question.
+
+**Stream / Streaming** — When the AI sends its answer word-by-word as it generates, instead of waiting until the whole answer is done. Makes SMART-Code feel faster.
+
+**System prompt** — Instructions you give the AI before it sees your question. SMART-Code's system prompt says "you are SMART-Code inside CodeNow IDE, you can read files via tools, prefer reading actual code over guessing." Your project's CLAUDE.md gets added here too.
+
+**Token** — A chunk of text the AI processes. Roughly 1 word = 1.3 tokens. Pricing for AI services is measured in tokens.
+
+**Tool** — Something the AI can DO, not just talk about. SMART-Code has three read-only tools today (`read_file`, `list_files`, `grep_code`). Write tools coming in v0.1.37.
+
+**Tool call / Tool use** — When the AI decides to use one of its tools. You see this as a status pill in SMART-Code.
+
+**Tool result** — What the AI got back from the tool. SMART-Code sends this back to the AI so it can keep working.
+
+**Turn** — One back-and-forth in a conversation. You say something, the AI responds — that's one turn. SMART-Code conversations are usually 1-3 turns; an agent loop turn can include many tool uses.
+
+**v0.1.36 / v0.1.37** — Version numbers. Like book editions. v0.1.36 ships today, v0.1.37 comes next. The first number (0) is the major version, the second (1) is the feature line, the third (36) is the release within that feature line.
+
+**WebContentsView** — Electron's name for "a real Chrome browser embedded inside our app." CodeNow's built-in browser tab is one of these.
+
+**WebSocket** — A way for two computers to keep a connection open and send messages back and forth in real-time. Slack and chat apps use WebSockets. SMART-Code's streaming uses something similar called Server-Sent Events.
+
+**Workspace** — The folder you have open in the IDE. Same as "project root." SMART-Code can only read inside your workspace, not anywhere else on your computer.
+
+---
+
+## Got more questions?
+
+- General CodeNow help: [Get Started](/get-started)
+- How agents work in general: [What is an agent?](/concepts/agents)
+- The Cloud vs Local trade-off: [Smart Coding marketing page](https://codenow.pro/smart)
+- Release notes for v0.1.36: [v0.1.36 release notes](/release-notes/v0-1-36) (coming once v0.1.36 is published)
+
+If a term in here is still confusing, that's our fault, not yours. Tell us at hello@codenow.pro and we'll add it to the glossary.
