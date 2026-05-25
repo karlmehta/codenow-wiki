@@ -1,9 +1,10 @@
 export default {
   index: {
-    type: 'page',
+    type: 'doc',
     title: 'Home',
     display: 'hidden',
   },
+  'smart-code': 'SMART Code Assistant',
   'get-started': 'Get Started',
   requirements: 'Requirements',
   concepts: 'Concepts',

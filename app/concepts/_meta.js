@@ -1,5 +1,4 @@
 export default {
-  'smart-code': 'SMART-Code (your coding assistant)',
   agents: 'What is an agent?',
   harnesses: 'Harnesses',
   runs: 'Runs and replay',
