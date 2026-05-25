@@ -1,0 +1,173 @@
+---
+title: v0.1.35 — Smart Coding (Claude + Codex, dual-lab routing)
+---
+
+# v0.1.35 — CodeNow Smart Coding · Two top labs · One agent · Routed per task
+
+**Released 2026-05-25.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.34 happens automatically on next launch.
+
+Two things shipped together:
+
+1. **CodeNow Smart Coding** — the bundled Cloud agent now routes every prompt across **Anthropic Haiku 4.5** (speed) and **OpenAI GPT-5 Codex** (depth) based on six real-time signals. Users never pick a model — the right one is picked for them. Marketed at [codenow.pro/smart](https://codenow.pro/smart).
+2. **30 days free with 50K tokens/day, then $9.99/mo** — replaces the v0.1.34 "free forever" framing. Bigger trial generosity, clearer transition to paid. Local mode (Ollama) stays free forever.
+
+Plus: BYOK pill removed from the CodeNow Code mode picker (BYOK now lives exclusively in the per-provider Claude Code / Codex / Gemini bottom tabs); daily quota replaces monthly; Slack-suggestion banner suppressed in test fixtures.
+
+---
+
+## CodeNow Smart Coding — what it is
+
+A new sub-picker inside CodeNow Code Cloud mode lets the user pick a lab — but the **default is Smart**, which routes per turn.
+
+```
+┌─ Cloud mode ───────────────────────────────────────────┐
+│  Lab:  [Smart]   Haiku   GPT-5                         │
+│                                                        │
+│  Today · 2026-05-25 · plan: free                       │
+│  4.2K / 50K input today  ·  0.8K / 10K output          │
+│  ▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 8%                            │
+└────────────────────────────────────────────────────────┘
+```
+
+When **Smart** is active, each chat message is tagged with the lab that answered:
+
+```
+CodeNow Code · Cloud · Haiku    Sure — useReducer is a React hook that lets you...
+CodeNow Code · Cloud · GPT      Looking at all 4 files: the auth middleware uses cookies because...
+```
+
+No black box. You see the routing in action on every turn.
+
+### The six signals
+
+Smart routing classifies every prompt against these signals (cheap, no extra round-trip — they're regex + counters in `site/api/codenow-code/chat.js → smartRoute()`):
+
+| Signal | Triggered when… | Routes to |
+|---|---|---|
+| `FAST_INTENT` | "explain", "format", "rename", "write a test", "complete", etc. | Haiku |
+| `DEEP_INTENT` | "refactor", "architect", "design", "migrate", "review", "optimize", etc. | GPT-5 |
+| `REASONING` | "why", "trade-off", "edge case", "race condition", "invariant", "root cause" | GPT-5 |
+| `HUGE_CONTEXT` | Total input > 8K chars (~2K tokens) | GPT-5 |
+| `LONG_THREAD` | More than 5 user turns in this conversation | GPT-5 |
+| `STACK_TRACE` | Stack trace AND more than 1 file referenced | GPT-5 |
+
+**Decision tree** (first match wins): `DEEP_INTENT → GPT` · `REASONING → GPT` · `STACK_TRACE+files → GPT` · `HUGE_CONTEXT → GPT` · `LONG_THREAD → GPT` · `FAST_INTENT → Haiku` · default → `Haiku`.
+
+Tuned so ~70-80% of typical chat turns route to Haiku (load-bearing for the daily-cap economics — $0.015/heavy-user/day at the cap).
+
+### User override
+
+The provider sub-picker pins Smart / Haiku / GPT-5. Pin Haiku for fast iteration, GPT for hard problems, Smart for "I don't want to think about it." Persists via `~/.codenow/settings.json` (key: `codenowCodeCloudProvider`).
+
+---
+
+## Daily quota (was monthly in v0.1.34)
+
+The `codenow_code_usage` table is now rekeyed on `(user_id, day)` instead of `(user_id, month)`. Resets every UTC midnight. Plans:
+
+| Plan | Daily input cap | Daily output cap | Monthly equivalent |
+|---|---|---|---|
+| free / trial | **50K** | 10K | ~1.5M / 300K |
+| paid / pro | 500K | 100K | ~15M / 3M |
+| team | 1M | 200K (per seat) | ~30M / 6M |
+| enterprise | 5M | 1M (per seat) | ~150M / 30M |
+| super-admin | 10M | 2M (safety net) | — |
+
+Schema migration applied to production Supabase via MCP. Table was empty so the migration was clean.
+
+`/api/codenow-code/usage` returns the live daily numbers; the chat panel's progress bar paints from this.
+
+---
+
+## Trial extended: 7 → 30 days
+
+`TRIAL_DAYS` constant bumped across `src/main.js`, `src/renderer/app.js`, and `site/api/account/status.js`. Existing users get gifted extra days (no regression — pure goodwill). Existing expired-trial users re-enter trial.
+
+The topbar trial pill now reads "Day N of 30" with amber starting at day 23 (7 days remaining).
+
+---
+
+## BYOK pill removed from CodeNow Code mode picker
+
+CodeNow Code is the **bundled** agent. BYOK belongs to the dedicated **Claude Code · Codex · Gemini · Aider · Copilot** bottom tabs — each runs the official CLI as a real pty subprocess. Conflating them confused users; the v0.1.35 mode picker is just `Cloud` + `Local`.
+
+A small migration in the renderer's state loader rewrites any persisted `byok` mode (from v0.1.34) to `cloud` silently so existing users don't end up on a non-existent pill.
+
+---
+
+## OPENAI_API_KEY required for full Smart routing
+
+Cloud mode now needs both `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` in Vercel project env (both `production` and `preview`). The server **gracefully falls back** if one is missing — returns the response from whichever lab IS configured, with structured `available_providers` metadata in the error payload. No crashes.
+
+Operator action — one-time:
+
+```bash
+vercel env add OPENAI_API_KEY production    # mark as sensitive
+vercel env add OPENAI_API_KEY preview
+vercel --prod --yes                          # redeploy to pick up
+```
+
+---
+
+## Marketing surface
+
+- New marketing page at [codenow.pro/smart](https://codenow.pro/smart) — outcome-first pitch ("Stop picking models. Get the right one. Every time.") with two-lab lockup, side-by-side comparison vs single-model agents, real-prompt example vignettes tagged with the lab that would answer, six outcome cards, pricing CTA.
+- Homepage hero rebuilt around Smart Coding as the lead — Claude + Codex lockup with brand colors, dual-lab promise, 30-day trial.
+- Comparison table at [codenow.pro/#compare](https://codenow.pro/#compare) — new top row "CodeNow Smart Coding" comparing dual-lab vs every competitor's single-lab story; pricing & token economics group rewritten for daily quota.
+- New section "Top 15 reasons devs are switching to CodeNow" — addresses the Cursor / Codex / Windsurf / Copilot user pain points one at a time.
+
+---
+
+## E2E hygiene
+
+The Slack-suggestion banner (orange-bordered notification at the top of every screenshot if the host has Slack installed) was creating misleading "looks like a warning" artifacts in test screenshots. All fixture seeds now set `slackSuggestionShown: true` to suppress it. Onboarding suite keeps the flag false since it tests first-launch tour behavior.
+
+Updated `tests/e2e/codenow-code.spec.js`:
+- Removed BYOK assertions; 3-mode picker became 2-mode picker
+- New test: provider sub-picker renders + switches across Smart / Haiku / GPT-5
+- BYOK screenshot replaced with cloud-mode-GPT-active screenshot (proves the GPT pill activates)
+- Status dot test rewritten for mode-aware behavior (cloud = ready dot, local without Ollama = off dot)
+
+---
+
+## Regression
+
+| Suite | Result |
+|---|---|
+| Smoke static | 0 errors / 0 warnings |
+| Smoke runtime | **156 / 156 pass** (+3 cloud-bridges, +1 dual-provider picker, +1 mode-switch persistence, –BYOK obsolete) |
+| Playwright E2E | **101 / 101 pass** (+provider picker test, +cloud-gpt-active screenshot, –BYOK obsolete) |
+
+All v0.1.32 / v0.1.33 / v0.1.34 features still green (Task Hub, pair-programming bridge, CodeNow Code Cloud + Local).
+
+Screenshots captured + READ for visible errors per the no-mocks rule:
+- `cnc-01-cloud-mode.png` — Slack banner gone, 30-day trial pill, 2-mode picker + 3-provider sub-picker, sign-in state with 30-day + $9.99 copy
+- `cnc-02-local-install.png` — Mode picker (no BYOK), install state with "code locally, zero connectivity" framing
+- `cnc-03-cloud-gpt-active.png` — GPT-5 pill visibly active, distinct from Smart/Haiku
+
+---
+
+## How to upgrade
+
+If you're on v0.1.31–v0.1.34, the embedded auto-updater picks v0.1.35 up on next launch. Click `Restart and update` when the banner appears.
+
+Fresh install from [codenow.pro](https://codenow.pro):
+
+- **Mac (Apple Silicon)** — `CodeNow-arm64.dmg` (signed + notarized)
+- **Mac (Intel)** — `CodeNow-x64.dmg` (signed + notarized)
+- **Windows** — `CodeNow-Setup.exe`
+- **Linux** — `CodeNow.AppImage`
+
+---
+
+## What's deferred
+
+- **Per-provider token meter** — currently the daily cap is one number; future versions may split Haiku vs GPT-5 usage so users can see which lab they burn more on
+- **Smart routing telemetry** — we don't currently log "Smart chose X for prompt Y" anywhere; future server-side aggregation could tune the heuristics over time
+- **Sub-second classifier model** — the v0.1.35 router is regex + counters (cheap, no API call). v0.1.36 might add a tiny embedding-based classifier for harder-to-detect intent (still no extra round-trip — would use Anthropic's cache-warmed small call)
+
+---
+
+## Honest scope reminder
+
+CodeNow Code Cloud's marketing page at /smart is now **outcome-first** (Karl: "we need MARKETING COPY and not the plumbing and wiring behind a beautiful house"). The engineering details (the six signals, the decision table) live HERE in the release notes for developers who want to peek — the marketing page sells the outcome.

@@ -1,4 +1,5 @@
 export default {
+  'v0-1-35': 'v0.1.35 — Smart Coding (Claude + Codex, dual-lab routing) · 30-day trial · daily quota',
   'v0-1-32': 'v0.1.32 — Task Hub (Codex parity) · Pair-program fix · 84/84 E2E',
   'v0-1-29': 'v0.1.29 — Trial pill · Stripe wired · 0 smoke fails',
   'v0-1-28': 'v0.1.28 — Sidecar (Mode C) · Pair-program consolidation · Workforce humans',
