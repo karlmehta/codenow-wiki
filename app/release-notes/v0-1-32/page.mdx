@@ -172,8 +172,8 @@ The bridge round-trip itself (`window.codenow.crdtConnect`) was always working â
 - `CodenowCrdtSession` is registered
 - Preload exposes `crdtConnect` / `crdtDisconnect`
 - Cross-world `CustomEvent.detail` round-trips correctly
-- `crdtConnect` with bogus args returns a shaped error in <2s (proves bridge is intact)
-- A mocked `CHANNEL_ERROR` surfaces a meaningful error in <2s
+- `crdtConnect` with bogus args returns a shaped error in &lt;2s (proves bridge is intact)
+- A mocked `CHANNEL_ERROR` surfaces a meaningful error in &lt;2s
 - A mocked subscribe hang produces the 10s inner-timeout (not the 15s safety net)
 
 ---
