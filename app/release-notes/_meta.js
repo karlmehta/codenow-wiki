@@ -1,4 +1,5 @@
 export default {
+  'v0-1-32': 'v0.1.32 — Task Hub (Codex parity) · Pair-program fix · 84/84 E2E',
   'v0-1-29': 'v0.1.29 — Trial pill · Stripe wired · 0 smoke fails',
   'v0-1-28': 'v0.1.28 — Sidecar (Mode C) · Pair-program consolidation · Workforce humans',
   'v0-1-27': 'v0.1.27 — Browser · Mobile PWA · JIRA→Studio · K8s · GSD',

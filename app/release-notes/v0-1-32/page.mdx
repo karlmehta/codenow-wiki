@@ -1,0 +1,229 @@
+---
+title: v0.1.32 — Task Hub (Codex-parity) · Pair-programming fix · E2E hardening
+---
+
+# v0.1.32 — Task Hub (Codex-style), pair-programming fix, full E2E green
+
+**Released 2026-05-24.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.31 happens automatically on next launch.
+
+Three things shipped together:
+
+1. **Task Hub** — a Codex-style cross-project task list in the 6th sidebar tab, with branch-per-task isolation by default. Beta users were running both CodeNow and Codex; they wanted Codex's task-centric workflow inside CodeNow so they could stop tab-switching.
+2. **Pair-programming bridge fix** — the "Live edit failed: crdt timeout (renderer crdt.js not loaded?)" toast that broke real-time collab in v0.1.31 is gone. Real cause was an unhandled Supabase Realtime subscribe failure; users now see the actual reason (e.g. expired JWT) and can act on it.
+3. **E2E hardening** — 13 long-standing stale failures in `integrations-rail.spec.js` fixed. Full Playwright suite is now **84/84 pass**, smoke runtime **147/147 pass**, smoke static **0 errors**. First release in months where the full regression is green end-to-end.
+
+---
+
+## Task Hub — what it is, why it's there
+
+The marquee feature. If you've been running CodeNow next to Codex, this is the bridge.
+
+### What you see
+
+A new tab on the left sidebar — sixth tab, between Agents and the integrations rail. Icon is a checkmark-in-a-box.
+
+Inside the tab:
+
+- **Title bar** with a `+ New` button (also `⌘⇧N` from anywhere)
+- **Search bar** that filters as you type
+- **Project filter chips** — `All` plus one chip per project that has tasks (counts shown)
+- **Grouped task list** — sticky project headers (`CODENOW`, `XSPAN-API`, etc.), then per-task rows with title, branch chip, status pill, and relative time
+- **Honest empty state** when you have no tasks yet — no fake placeholder rows, no demo data
+
+Click any task row → the editor area is replaced by a 3-pane task detail view:
+
+```
+┌─ HEADER ──────────────────────────────────────────────────────────┐
+│  Fix Cmd+K stale results        [← Back] [Update ↑] [Discard]    │
+│  🌿 codenow/tsk-46d50577ec0f → main · ● needs review · claude-opus-4-7  │
+├─ CONVERSATION ─────────────────────┬─ FILES CHANGED ─────────────┤
+│  YOU · INITIAL PROMPT              │  No diff captured           │
+│  Quick-open results stay stale     │                             │
+│  after switching projects.         │  v0.1.33 ships inline file  │
+│                                    │  list + click-to-open in    │
+│  [Ask for follow-up changes…]      │  Monaco                      │
+│  (disabled — v0.1.33)              │                             │
+└────────────────────────────────────┴─────────────────────────────┘
+```
+
+### Branch-per-task (Codex parity)
+
+Default ON. When you create a task, CodeNow runs `git branch codenow/tsk-<id>` off your chosen base (defaults to your current branch). The task record stores the branch name. Your working directory is untouched — the branch exists; you check it out from the terminal when you're ready to start agent work on it.
+
+If the project isn't a git repo, the branch toggle disables itself with an honest warning instead of silently failing. If git refuses the branch op (dirty index, missing base), the task record still saves and the error surfaces inline.
+
+### Status lifecycle
+
+Five statuses, color-coded across the UI:
+
+| Status | Pill color | Meaning |
+|---|---|---|
+| `running` | blue | Agent still working |
+| `needs-review` | amber | Default after create; agent finished, awaiting your call |
+| `merged` | green | Branch merged into base |
+| `discarded` | gray | Branch deleted without merge |
+| `failed` | red | Agent errored out |
+
+`merged` and `discarded` ship as **visible but inert** in v0.1.32 — the buttons exist and tooltip "ships in v0.1.33". This is deliberate: no destructive git operations until the smoke matrix has had a release to settle. v0.1.33 wires `[Update ↑]` to `git merge` the task branch into base, and `[Discard]` to `git branch -D`.
+
+### Migration: existing runs become tasks
+
+On first hydrate of the Tasks tab, CodeNow scans every project's `.codenow/runs/` directory and creates a task entry for each recorded run that doesn't already have one (keyed on `runSlug`). These show up with `backfilled: true` and default to status `merged` (best guess for "this is historical"). Idempotent — re-runs are no-ops.
+
+You'll typically see your existing agent run history appear in the Tasks tab the first time you open it after the upgrade.
+
+### New task modal
+
+`⌘⇧N` anywhere → new-task form:
+
+| Field | Default | Notes |
+|---|---|---|
+| Title | (empty) | Required. Max 200 chars. |
+| Project | Active project | All projects in your `projects.json` |
+| Base branch | Current branch | Live `git for-each-ref` list of local branches |
+| Model | Active model | Claude Opus 4.7 / Sonnet 4.6 / Codex / Gemini / Aider / Copilot |
+| Initial prompt | (empty) | Max 4000 chars. Surfaces in the task detail conversation pane. |
+| Create isolated branch | ✓ ON | Codex-parity default. Toggle off if you want the task to live on the base branch. |
+| Run with full access | ☐ off | Permission mode hint — surfaced in detail-view header as a pill |
+
+Submit → branch created → task record written → modal closes → detail view opens for the new task.
+
+### Data model
+
+Persisted to `~/.codenow/tasks.json` — single global index across all projects so the sidebar can show cross-project lists. Capped at 500 entries (oldest discarded by `lastActivityAt`).
+
+Per task:
+
+```json
+{
+  "id": "tsk_a1b2c3d4e5f6",
+  "projectPath": "/Users/karl/workspace/codenow",
+  "projectName": "codenow",
+  "title": "Fix pair-programming bridge timeout",
+  "branch": "codenow/tsk-a1b2c3d4e5f6",
+  "baseBranch": "main",
+  "model": "claude-opus-4-7",
+  "status": "needs-review",
+  "permissionMode": "standard",
+  "startedAt": "2026-05-24T18:30:12Z",
+  "lastActivityAt": "2026-05-24T19:45:33Z",
+  "diffSummary": "",
+  "runSlug": "",
+  "initialPrompt": "Investigate why the crdt timeout fires …",
+  "backfilled": false
+}
+```
+
+### IPC surface (for power users / extensions)
+
+Every Task Hub operation is exposed on `window.codenow.tasks*`:
+
+| Method | Returns |
+|---|---|
+| `tasksList()` | `{ ok, tasks: [] }` — all tasks across projects |
+| `tasksListForProject(path)` | `{ ok, tasks: [] }` — filtered |
+| `tasksGet(id)` | `{ ok, task }` |
+| `tasksCreate({ projectPath, title, baseBranch, model, useBranch, permissionMode, initialPrompt })` | `{ ok, task }` |
+| `tasksUpdate(id, patch)` | `{ ok, task }` |
+| `tasksSearch(query)` | `{ ok, tasks: [] }` |
+| `tasksListBranches(path)` | `{ ok, branches: [] }` |
+| `tasksIsGitRepo(path)` | `{ ok, isRepo, current }` |
+| `tasksBackfill(projects)` | `{ ok, added }` |
+
+### What's deferred to v0.1.33
+
+Documented in the detail-view buttons + tooltips themselves so there's no surprise:
+
+- **`[Update ↑]`** — `git merge` the task branch back into base
+- **`[Discard]`** — `git branch -D` the task branch
+- **Inline file diff** — replace "Files changed: No diff captured" with the real per-file list, click-to-open in Monaco
+- **Inline follow-up prompts** — the disabled textarea becomes a real input that spawns an agent turn against the task's branch
+- **Task search in `⌘⇧P`** — task records reachable from the global command palette
+
+### What's deferred to v0.1.34
+
+- **Automations** — recurring scheduled tasks (Codex's other big surface)
+- **Mobile API** — list tasks remotely (Codex mobile parity)
+
+---
+
+## Pair-programming bridge fix
+
+If you hit "Live edit failed: crdt timeout (renderer crdt.js not loaded?)" on the Share modal or `Go live` button in v0.1.31, this is gone.
+
+### Real cause
+
+`src/renderer/crdt.js` awaited Supabase Realtime `channel.subscribe()` with no timeout and no error handling. Subscribe callback statuses are `SUBSCRIBED`, `CHANNEL_ERROR`, `TIMED_OUT`, `CLOSED` — the code only resolved on `SUBSCRIBED`, so any other status (most commonly `CHANNEL_ERROR` from an expired JWT) hung the promise forever. The preload's 8-second safety net then fired with the misleading "renderer crdt.js not loaded?" message — making it look like the bridge was broken when actually subscribe had failed and never come back.
+
+### Fix
+
+`channel.subscribe` now has an explicit handler for every status, plus a 10-second inner timeout with a meaningful error. The preload safety timeout was raised to 15 seconds so the inner deadline always fires first with the real reason. Users now see toasts like:
+
+- `Live edit failed: Supabase Realtime subscribe failed (CHANNEL_ERROR): JWT expired`
+- `Live edit failed: Supabase Realtime subscribe timed out after 10s — check network or supabase status`
+
+The bridge round-trip itself (`window.codenow.crdtConnect`) was always working — confirmed via a new diagnostic test (see below). The hypothesis-then-test-then-fix path is captured in `tests/e2e/crdt-bridge.spec.js`.
+
+### New diagnostic test
+
+`tests/e2e/crdt-bridge.spec.js` — 7 cases that cover:
+
+- Vendor bundle loads in renderer
+- `CodenowCrdtSession` is registered
+- Preload exposes `crdtConnect` / `crdtDisconnect`
+- Cross-world `CustomEvent.detail` round-trips correctly
+- `crdtConnect` with bogus args returns a shaped error in <2s (proves bridge is intact)
+- A mocked `CHANNEL_ERROR` surfaces a meaningful error in <2s
+- A mocked subscribe hang produces the 10s inner-timeout (not the 15s safety net)
+
+---
+
+## E2E hardening — 84 / 84
+
+The full Playwright suite hadn't been all-green in months. v0.1.32 fixed it.
+
+### `integrations-rail.spec.js` — 13 fixes
+
+All 13 long-standing failures had **three root causes**:
+
+1. **Stale assertion text.** Panels changed `"Connect X"` → `"Sign in with X"` when OAuth shipped in v0.1.21. Five tests still asserted the old copy.
+2. **JIRA shipped.** v0.1.18 made JIRA a real integration. The "coming-soon v18 pill" and "ships in v0.1.17.1 toast" tests were obsolete — rewritten to assert the real disconnected → Sign in with Atlassian → site/email/token form flow.
+3. **v0.1.26 modal-flow change.** Clicking the empty-state CTA now launches OAuth in the browser directly — no in-app modal on the happy path. The token-paste modal is now reached via `connectProviderWithModal('X')` and the token form itself is hidden behind a "Use an API token instead →" link. Tests now follow that path.
+
+Cascade failures were also fixed by making each test **self-contained** with `openGithubPanel()` / `openSlackPanel()` / `openJiraPanel()` / `openGithubModal()` / `openSlackModal()` helpers and `closeAnyIntegrationModal()` / `closeIntegrationPanel()` cleanup wrappers. A single failure can no longer break the chain.
+
+### Final regression
+
+| Suite | Result |
+|---|---|
+| Smoke static | 0 errors / 0 warnings |
+| Smoke runtime | **147 / 147 pass** (+6 new tasks cases) |
+| E2E `boot.spec.js` | 17 / 17 |
+| E2E `crdt-bridge.spec.js` (new) | 7 / 7 |
+| E2E `file-editing.spec.js` | 5 / 5 |
+| E2E `integrations-rail.spec.js` | **28 / 28** (was 15 / 28) |
+| E2E `onboarding-and-branding.spec.js` | 9 / 9 |
+| E2E `tasks.spec.js` (new) | 9 / 9 |
+| E2E `tasks-screenshots.spec.js` (new) | 9 / 9 |
+| **TOTAL E2E** | **84 / 84** |
+
+Plus a screenshot-reading pass: every Task Hub state was captured AND visually inspected for errors per the no-mocks rule — empty state, new-task modal (defaults + filled), list with 1 task, list with 3 tasks, detail view (3-pane), back-to-code, search filter, zoomed sidebar. No visible errors, no theater.
+
+---
+
+## How to upgrade
+
+If you're on v0.1.31 or earlier, the embedded auto-updater picks v0.1.32 up on next launch. Click `Restart and update` when the banner appears.
+
+If you're installing fresh, download from [codenow.pro](https://codenow.pro):
+
+- **Mac (Apple Silicon)** — `CodeNow-arm64.dmg` (signed + notarized)
+- **Mac (Intel)** — `CodeNow-x64.dmg` (signed + notarized)
+- **Windows** — `CodeNow-Setup.exe`
+- **Linux** — `CodeNow.AppImage`
+
+---
+
+## Honest scope reminder
+
+Per the [Two Paths](/concepts/two-paths) positioning, CodeNow ships features only when they actually work end-to-end. The Task Hub in v0.1.32 is **read-only on git operations** (`Update ↑` and `Discard` are visible but disabled) — that's the no-mocks rule applied to itself. v0.1.33 wires those buttons to real `git merge` / `git branch -D` once the smoke matrix has had a release to settle without regressions.
