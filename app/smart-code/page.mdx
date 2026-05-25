@@ -236,6 +236,8 @@ ollama pull qwen2.5-coder:32b
 
 After the pull finishes, hit **Re-check** in the SMART-Code panel again. The model picker at the top of the panel will fill in — pick the one you just pulled and start chatting.
 
+> **Semantic codebase search (v0.1.38).** Local mode also uses Ollama for the in-IDE semantic search of your project files. Run `ollama pull nomic-embed-text` once to enable it — this is the embedding model that powers the `semantic_search` tool when you're offline. After it's pulled, SMART-Code will index your project automatically on switch and re-index changed files in the background. Without this model, semantic search falls back to a clear "not available" message; the rest of Local mode still works.
+
 ### How SMART-Code works in Local mode
 
 Same agent, same skills, same UX as Cloud — just a different brain:
