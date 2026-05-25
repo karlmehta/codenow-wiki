@@ -172,9 +172,107 @@ You can pick between two backends — same agent, different engine room:
 | **Cloud** (default) | We host the AI on our servers. You get 30 days free with 50,000 tokens per day across both brains. Then $9.99/mo. | Anyone — works on any laptop, no setup |
 | **Local** | The AI runs on your own laptop using a free tool called Ollama. No internet needed once installed. Unlimited and free forever. | Privacy-focused users, developers with powerful laptops (16GB+ RAM recommended) |
 
-Switch any time with the **Cloud / Local** pills at the top of the SMART-Code panel.
+Switch any time with the **Cloud / Local** pills at the top of the SMART-Code panel. The next section walks through the full Local install + first-model flow.
 
 > **What's a token?** Roughly, a token is a chunk of text the AI processes. As a rule of thumb, 1 word ≈ 1.3 tokens. 50,000 tokens/day is enough for ~50-100 normal coding conversations.
+
+---
+
+## Running SMART-Code locally with Ollama
+
+Cloud mode is the default and fastest path. But if you'd rather keep your code off the internet entirely — or you've burned through the free daily cap and don't want to pay yet — **Local mode** runs the whole thing on your laptop. No proxy, no telemetry, no daily limit. Free forever.
+
+<!-- TODO: capture via npm run screenshots; see tools/screenshots/capture.js -->
+![SMART-Code panel with Local pill selected — Install Ollama empty state with the brew install command, Download Ollama and Re-check buttons](/screenshots/smart-code-local-ollama.png)
+
+### Why go Local
+
+- **Privacy.** Every keystroke, prompt, file read, and answer stays on your laptop. Nothing crosses the network — not to us, not to Anthropic, not to OpenAI.
+- **No daily cap.** Cloud gives you 50,000 tokens/day free for 30 days, then $9.99/mo. Local has no cap, ever.
+- **No API bill.** Bring your own laptop, not your own credit card.
+- **Works offline.** On a plane, on a train, in a tunnel — once Ollama is installed and a model is pulled, you don't need internet.
+
+### System requirements
+
+| Component | Minimum | Recommended |
+|---|---|---|
+| RAM | 8GB (for a 7B model) | 16GB+ (smoother, larger models) |
+| Disk | ~5GB free per model | 20GB+ if you want a few options |
+| OS | macOS, Linux, Windows | any of the three |
+| GPU | not required (CPU works) | Apple Silicon / NVIDIA helps a lot |
+
+A 7B model uses around 5GB of RAM while running. If your laptop has 8GB total, expect everything else to slow down while SMART-Code is answering. 16GB is the comfortable floor; 24GB+ unlocks the bigger 32B models.
+
+### Install flow — step by step
+
+1. Open the **SMART-Code** panel at the bottom of CodeNow.
+2. Click the **Local** pill at the top of the panel (next to **Cloud**).
+3. If Ollama isn't installed, you'll see the "Install Ollama — code locally, zero connectivity" empty state.
+4. Either click **Download Ollama →** (opens https://ollama.com/download in your browser) **or** copy the one-liner shown in the panel and paste it into your terminal:
+
+   ```bash
+   brew install ollama && ollama serve
+   ```
+
+   On Linux: `curl -fsSL https://ollama.com/install.sh | sh`. On Windows: download the installer from the link.
+5. Once Ollama is running, hit **Re-check** in the panel. SMART-Code auto-detects Ollama on `http://localhost:11434` and moves you to the next step.
+
+> If you close your terminal, Ollama stops. Either keep that terminal open in the background, or install Ollama as a system service (the Mac installer does this for you — `brew install --cask ollama` if you prefer the desktop app over the CLI).
+
+### Pull a model before your first chat
+
+Ollama itself is just the runner — you still need to download an AI model. Run **one** of these in your terminal (each is a one-time download):
+
+```bash
+# Recommended default — best 7B coder model, ~4.7GB
+ollama pull qwen2.5-coder:7b
+
+# General-purpose, slightly broader knowledge, ~4.7GB
+ollama pull llama3.1:8b
+
+# Power-user pick — needs 24GB+ RAM, but punches at GPT-4 level for code, ~19GB
+ollama pull qwen2.5-coder:32b
+```
+
+After the pull finishes, hit **Re-check** in the SMART-Code panel again. The model picker at the top of the panel will fill in — pick the one you just pulled and start chatting.
+
+### How SMART-Code works in Local mode
+
+Same agent, same skills, same UX as Cloud — just a different brain:
+
+- **Same tools** — `read_file`, `list_files`, `grep_code` all work identically.
+- **Same skills** — test-writing, refactor, debug, explain. The skill router still detects what you're asking.
+- **Same status pills** — you see exactly which files the local model read.
+- **Same safety guardrails** — same blocklist for `.env`, `.ssh`, `node_modules`, etc.
+
+The one difference: **no smart routing in Local mode.** Cloud has two brains (Claude + GPT) and SMART-Code picks between them per question. Local has whichever models you've pulled — you pick the model from the dropdown.
+
+### Switching between Cloud and Local
+
+The **Cloud / Local** pills sit at the top of the SMART-Code panel. Click to switch any time. A few things worth knowing:
+
+- **Conversation history is per mode.** Switching to Local doesn't lose your Cloud chat — it just shows you the Local chat (which might be empty if you've never used it).
+- **Switching is instant.** No reload, no reconnect. The next message you send goes to whichever mode is selected.
+- **Your daily Cloud cap is unaffected by Local use.** Local conversations don't count against your 50K/day.
+
+### Honest tradeoffs
+
+Local mode is real and works, but it isn't strictly better than Cloud. Pick honestly:
+
+| | Cloud | Local |
+|---|---|---|
+| Speed | Fast (1-3s first token) | Slower (3-15s, depends on machine + model) |
+| Quality | Claude Haiku 4.5 + GPT-5 Codex — top of the leaderboard | Strong but a step behind frontier models |
+| Smart routing | Yes — picks the right brain per question | No — you pick the model |
+| Setup | Sign in, that's it | Install Ollama, pull a model, keep `ollama serve` running |
+| Privacy | Code is sent to us + the AI provider | Nothing leaves your laptop |
+| Cost | 30 days free, then $9.99/mo | Free forever |
+| Daily cap | 50K tokens/day on free | None |
+| Offline | No | Yes |
+
+If you're sketching out a one-off script, Cloud is faster and the smart routing means you don't have to think about which model fits. If you're working on client code under NDA, or you fly a lot, or you just don't want a recurring bill, Local is the answer.
+
+You can flip between them mid-project. No re-config, no lost work.
 
 ---
 

@@ -1,4 +1,5 @@
 export default {
+  'v0-1-37': 'v0.1.37 — Trial-pill regression · PATH shim · Black icon · /launch landing',
   'v0-1-35': 'v0.1.35 — Smart Coding (Claude + Codex, dual-lab routing) · 30-day trial · daily quota',
   'v0-1-32': 'v0.1.32 — Task Hub (Codex parity) · Pair-program fix · 84/84 E2E',
   'v0-1-29': 'v0.1.29 — Trial pill · Stripe wired · 0 smoke fails',

@@ -1,0 +1,81 @@
+---
+title: v0.1.37 — Trial-pill regression · PATH shim · Black icon · /launch landing
+---
+
+# v0.1.37 — Focused patch: paywall pill, claude PATH warning, Dock icon, /launch
+
+**Released 2026-05-25.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.36 happens automatically on next launch.
+
+Five fixes shipping together. No new features — everything here is a regression or visibility bug Karl hit dogfooding v0.1.36 in the last 24h.
+
+---
+
+## 1. Trial pill no longer paywalls comped/lifetime users
+
+**Bug:** `Day 29 of 30 · Upgrade` appeared in the topbar for accounts on `lifetime`, `comped`, `paid`, `business`, `team`, `enterprise`, `pro`, `developer-pro`, `super-admin`, `free-Nmo`, or with role `admin`. Their plan was correct server-side (no paywall, no quota), but the renderer fast-path computed `trialDaysLeft` from `createdAt` regardless of plan — so a lifetime user 29 days into account life saw "Day 29 of 30 · Upgrade" as if the trial were about to expire.
+
+**Fix:** `src/renderer/app.js` now gates *both* the dropdown counter (`X days left in trial`) and the topbar pill on a `planIsExempt` check mirroring the server's `PAYWALL_EXEMPT_PLANS`. Lifetime/comped/admin → pill hidden, full stop, no matter what `trialDaysLeft` says.
+
+If the pill is still showing for a known-comped account after upgrading, the Supabase `profiles.plan` row probably still says `trial`; fix it in the admin dashboard (`/admin → Users → Plan`).
+
+---
+
+## 2. "Native installation exists but ~/.local/bin is not in your PATH" warning gone
+
+**Bug:** Every time the user launched `claude` inside CodeNow's embedded terminal, the Claude CLI printed a yellow warning suggesting they `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.codenow/zsh-shim/.zshrc && source …`. The shim was already doing this — `.zshrc` had the export and interactive shells saw `~/.local/bin` first in `$PATH`. But Claude's PATH check also spawns **non-interactive** sub-shells, which only honour `.zshenv` (not `.zshrc` / `.zprofile`). The shim had no `.zshenv` → sub-shells started with the unmodified PATH → Claude's check failed → warning.
+
+**Fix:** `ensureZshShim()` in `src/main.js` now also writes `$ZDOTDIR/.zshenv` with the same source-and-re-prepend pattern as `.zprofile` / `.zshrc`. Verified non-interactive: `ZDOTDIR=~/.codenow/zsh-shim zsh -c 'echo $PATH'` puts `/Users/<u>/.local/bin` first.
+
+Existing installs pick up the fix on next IDE launch (the shim is rewritten on every `terminal-create`).
+
+---
+
+## 3. App icon — black background, white shape
+
+**Bug:** macOS wrapped the transparent-background blue/purple gradient hexagon icon in its default light grey rounded square. In a dense Dock or in the menu bar, it disappeared into other light-tinted icons.
+
+**Fix:** Regenerated `assets/icon.png` (1024×1024) and `assets/icon.icns`:
+- Solid black background, macOS HIG corner radius (~22.37%, ~229px at 1024).
+- White shape (the existing C-hexagon + `</>` glyph, alpha-masked and recoloured solid white).
+- ~80% canvas fill, original padding ratio preserved.
+- Multi-size `iconset` built via `sips` → `iconutil -c icns`.
+
+Originals backed up to `assets/icon.png.bak-blue-gradient` and `assets/icon.icns.bak-blue-gradient` in case Karl wants to revert.
+
+---
+
+## 4. /launch landing page (was 404)
+
+**Bug:** `https://codenow.pro/launch/` returned 404. The hero CTAs on socials + WhatsApp seeds all pointed there.
+
+**Fix:** New `site/launch/index.html` — a 15-reasons landing page (the canonical list from the wiki homepage Callout) with the homepage two-row nav, hero with Mac/Windows/Linux download CTAs, responsive numbered card grid, final 30-day-trial CTA + footer. Positioning audited clean: no XSpan / TrustModel / governance / GRC / compliance / open-source / audit-the-source strings. Multi-model framing preserved (Claude / Codex / Gemini / Aider / Copilot, BYOK).
+
+Deployed via Vercel auto-rollout on `main` push — no `vercel.json` change needed.
+
+---
+
+## 5. Wiki — SMART Code Assistant promoted to top of left nav · stale channels content removed
+
+**Bug:** The wiki's left nav was missing on the home page (index page was typed as `page`, suppressing sidebar). SMART-Code lived buried under `/concepts/smart-code`, three layers deep. And the Requirements page still had a "CodeNow channels vs. Slack channels" section even though channels were ripped out in v0.1.28 (Workforce humans-only).
+
+**Fix:**
+- `app/concepts/smart-code/` → `app/smart-code/` (`git mv`). New URL: `/smart-code`.
+- `app/_meta.js`: `'smart-code': 'SMART Code Assistant'` is the first top-level item; `index` changed from `type: 'page'` → `type: 'doc'` so the homepage now renders with the sidebar.
+- `app/requirements/page.mdx`: deleted the channels-vs-channels section.
+- `app/page.mdx`: new first `<Cards.Card>` linking to `/smart-code` + a new Wiki sections bullet at the top.
+- `app/smart-code/page.mdx`: added topbar + Model Arena screenshot embeds; expanded the Local / Ollama section into its own H2 with install flow, recommended `ollama pull` commands, and an honest tradeoffs table.
+
+---
+
+## Coming in v0.1.38
+
+The SMART-Code write/edit milestone gets its own focused cycle:
+
+- File edits with Approve/Reject diff viewer (red-removed / green-added, then apply on click).
+- Three permission modes wired (Confirm / Safe / Full pills — already in topbar, will become functional).
+- GPT-with-tools (today, tool-using turns always run on Claude; v0.1.38 keeps the Smart-routed brain on tool turns too).
+- Conversation persistence — close the tab, reopen, history restored. Search across past conversations. Share-as-link.
+- Per-tool token breakdown in the daily usage meter.
+- Shell-run with approval (`npm test`, `pytest`, one-liners) — output fed back to SMART-Code for failure diagnosis.
+
+Tracking on the [SMART Code Assistant page](/smart-code) "What's coming in v0.1.37" section (which we'll rename to v0.1.38 when those land).
