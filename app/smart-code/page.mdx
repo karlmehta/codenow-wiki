@@ -278,22 +278,49 @@ You can flip between them mid-project. No re-config, no lost work.
 
 ---
 
-## What SMART-Code can't do yet (honest)
+## How routing works
 
-In v0.1.36, SMART-Code can **read** your code but can't **change** it. If it suggests an edit, you copy/paste it into your file yourself.
+When Smart mode is on, SMART-Code looks at your prompt and picks one of the two labs (Claude Haiku 4.5 or GPT-5 Codex) before answering. You don't see the decision happen — you just get the answer. But the routing is **fully auditable**: click the model tag on any answer (the little pill like `SMART-Code · GPT`) to open a side drawer that shows exactly which signals matched and why this turn went where it did.
 
-It also can't:
-- Run your tests automatically
-- Run shell commands (like `npm install` or `git commit`)
-- Save its conversation between app restarts (your chat clears when you close the tab)
-- Be different per provider for tool use (today, when SMART-Code needs to use tools, it always uses Claude — even if Smart mode initially picked GPT)
-- Show you a per-tool token breakdown in the usage meter
+**The six signals**, in priority order (first match wins):
 
-All of these are coming in v0.1.37. Here's the plan.
+| Signal | When it matches | Routes to |
+|---|---|---|
+| `DEEP_INTENT` | Your message contains words like **refactor, architect, design, migrate, optimize, review** | GPT-5 |
+| `REASONING` | Words like **why, trade-off, race condition, root cause, edge case, invariant** | GPT-5 |
+| `STACK_TRACE` + `FILE_MENTIONS > 1` | Looks like a stack trace AND more than one file is referenced | GPT-5 |
+| `HUGE_CONTEXT` | Total input > 8K characters (~2K tokens) | GPT-5 |
+| `LONG_THREAD` | More than 5 user turns in this conversation (iterative refinement → switch to deep) | GPT-5 |
+| `FAST_INTENT` | Words like **explain, format, rename, write a test, complete, summarize** | Haiku |
+| (Default) | Nothing matched | Haiku (speed wins for typical short turns) |
+
+The drawer shows all six signals every time, with a ✓ or ✗, and for matched signals it shows the **evidence** — the substring that triggered the match with ~20 characters of surrounding context (e.g. `"...let's refactor the auth..."`). The winning signal's row is highlighted so you can see at a glance which one tipped the decision.
+
+**Manual override**: the `Smart · Haiku · GPT-5` pill selector at the top of the SMART-Code panel pins your choice. When you've manually pinned a lab, the drawer shows `Manually pinned by user` instead of a signal list — no routing happened.
+
+**Why this matters**: other tools (Cursor, Windsurf) route silently. You ask, an answer appears, and there's no way to know whether it came from a fast model or a careful one. CodeNow's whole positioning is that you can see and override every decision. The drawer makes that promise real on every turn.
 
 ---
 
-## What's coming in v0.1.37
+## What SMART-Code can't do yet (honest)
+
+As of v0.1.38, SMART-Code can **read** AND **change** your files (with Approve/Reject on every write), search your codebase semantically, and use tools with both Claude and GPT-5. What it still can't do:
+
+- Run your tests automatically
+- Run shell commands (like `npm install` or `git commit`) — coming in v0.1.39 with the same approval modal
+- Save its conversation between app restarts (your chat clears when you close the tab)
+- Show you a per-tool token breakdown in the usage meter
+- Speculative dual-execution — when GPT-5 is slow, fire Haiku in parallel and show its draft instantly while GPT thinks. Coming in v0.1.39.
+
+---
+
+## What's coming in v0.1.39
+
+Speculative dual-execution + enterprise harnesses (ServiceNow Build Agent SDK · Salesforce Agentforce DX). See the [v0.1.39 plan in the release notes](/release-notes) once it lands.
+
+---
+
+## (Historical) What was planned for v0.1.37
 
 Five upgrades that turn SMART-Code from a "read-only research assistant" into a full coding partner.
 
