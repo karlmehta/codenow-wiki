@@ -1,0 +1,148 @@
+---
+title: v0.1.38 — SMART-Code grows up · write tools · semantic codebase index · routing transparency
+---
+
+# v0.1.38 — SMART-Code grows up: write, see why, search by meaning
+
+**Released 2026-05-25.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.37 happens automatically on next launch.
+
+This is the SMART-Code maturity release. In v0.1.36 the assistant could only **read** your code. In v0.1.37 we fixed the regressions that made it look broken. In v0.1.38 it grows up — it can edit files (with your approval), it can search your codebase by *meaning* not just keywords, and the routing layer that picks between Claude and GPT-5 is now fully transparent.
+
+Five items shipped:
+
+1. **Write tools + Approve/Reject diff modal** — `edit_file`, `create_file`, `delete_file`
+2. **Confirm / Safe / Full permission modes** — finally wired
+3. **GPT-5 with tools** — DEEP_INTENT prompts no longer fall back to Anthropic when tools are attached
+4. **Codebase semantic index** — Voyage `voyage-code-3` + Supabase pgvector for cloud; Ollama `nomic-embed-text` + per-project SQLite for local
+5. **Routing transparency drawer** — click the model pill on any SMART-Code answer to see which signals matched and why it routed where it did
+
+What's NOT in this release (deferred to v0.1.39 with a focused cycle): the **speculative dual-execution** half of item #5 — running Haiku in parallel with GPT and swapping in the better answer. The implementing agent stalled mid-task; we chose to ship the cleaner transparency drawer first rather than rush the parallel-streaming work.
+
+---
+
+## 1. Write tools — `edit_file`, `create_file`, `delete_file`
+
+SMART-Code can now **change** your files. Before this release, every "fix this" ended in copy-paste from chat. Now the assistant proposes the change, you see a clean diff, and you click **Approve** or **Reject**.
+
+Three new tools wired into the agent loop:
+
+| Tool | What it does | Safety |
+|---|---|---|
+| `edit_file({path, old_string, new_string, replace_all?})` | Surgical string replacement | Rejects if `old_string` isn't unique (unless `replace_all=true`); rejects if path leaves project root |
+| `create_file({path, content})` | New file with full contents | Rejects if file exists; rejects on safety-list paths |
+| `delete_file({path})` | Remove a file | Rejects directories, missing files, and safety-list paths |
+
+**The safety list — what SMART-Code is NEVER allowed to write or delete:**
+- `.env`, `.env.*` (any dotenv)
+- `.ssh/`, `id_rsa*`, `id_ed25519*`, `*.pem`, `*.key`
+- `.aws/`, `.docker/`, `.netrc`, `.gnupg/`
+- `node_modules/`, `.git/`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`
+- Anything outside your project root
+
+Hard cap: 1MB per file write. Reject larger.
+
+**The Approve / Reject modal:**
+
+Every write tool call surfaces a modal with the diff. For `edit_file` you see the file's current content with the `old_string` highlighted red and the result with `new_string` highlighted green. For `create_file` you see the full new contents. For `delete_file` you see the file contents and a delete warning.
+
+Click **Approve** → the IPC `codenow-code:edit-file` (or `:create-file` / `:delete-file`) runs the operation atomically (temp + rename) and the assistant gets a normal `tool_result` success. Click **Reject** → the assistant gets `tool_result` with `is_error: true, content: "User rejected the edit. Try a different approach."` and re-plans.
+
+---
+
+## 2. Permission modes — finally functional
+
+The **Confirm / Safe / Full** pills in the topbar weren't cosmetic — they already drove per-project AI-CLI autonomy (claude / codex / gemini / aider auto-approve). v0.1.38 extends them to also drive SMART-Code's permission mode. One pill click, one mental model:
+
+| Mode | Read tools (read_file, list_files, grep_code, semantic_search) | Write tools (edit_file, create_file, delete_file) | Shell tools (future) |
+|---|---|---|---|
+| **Confirm** | Asks before every call | Asks before every call | Asks before every call |
+| **Safe** | Auto-execute | Asks before every call | Asks before every call |
+| **Full** | Auto-execute | Auto-execute | Auto-execute |
+
+Persisted to `~/.codenow/settings.json` key `smartCodePermissionMode`. Default: `confirm`. Setting survives restart.
+
+---
+
+## 3. GPT-5 with tools — no more Anthropic fallback
+
+In v0.1.36 the smart router would route DEEP_INTENT prompts to GPT-5 — *unless* tools were attached, in which case it silently fell back to Anthropic Haiku 4.5. The whole point of routing is undermined when tool turns can't reach the right brain.
+
+v0.1.38 fixes this. `streamOpenAI` in `site/api/codenow-code/chat.js` now:
+- Translates Anthropic tool schemas to OpenAI function-calling schemas (`input_schema` → `parameters`).
+- Parses `tool_calls` deltas from OpenAI's SSE stream (buffered per `index`).
+- Emits the same normalized `event: tool_use` events as `streamAnthropic` — the renderer agent loop stays provider-agnostic.
+- Translates `tool_result` continuation messages from Anthropic format to OpenAI's `role: 'tool'` format with `tool_call_id`.
+
+Net result: a DEEP_INTENT prompt like "refactor my auth across these 4 files" now routes to GPT-5 with tools, instead of falling back to Haiku.
+
+**Honest gap:** the smoke rig drives the renderer only — there's no fetch-mocking seam against the Vercel serverless handler, so the full server-side OpenAI tool-call SSE roundtrip isn't asserted end-to-end. Server unit coverage belongs in a separate Node test rig (`tools/smoke/server-chat.mjs`) — queued. Per the no-mocks rule we did not fabricate renderer-side coverage that would claim more than we have.
+
+---
+
+## 4. Codebase semantic index — RAG-grade retrieval
+
+Single biggest quality jump in this release.
+
+Before: SMART-Code's `grep_code` ran a regex across hundreds of files when you asked "where does login work?" Cursor and Windsurf give you the right 3 files in 200ms because they pre-indexed embeddings. v0.1.38 closes that gap.
+
+**How it works:**
+
+Two backends, mode-aware:
+
+| Mode | Embedding model | Persistence | Retrieval |
+|---|---|---|---|
+| **Cloud** (default) | Voyage `voyage-code-3` (1024-dim, Anthropic-recommended for code) | Supabase pgvector + HNSW index | `<->` cosine via RPC, sub-100ms |
+| **Local** (Ollama) | `nomic-embed-text` (~137M params, runs on CPU) | `~/.codenow/projects/<slug>/index.json` | Naive in-memory cosine — fast enough for ~5K chunks |
+
+**Lifecycle:**
+
+- **On project open**, CodeNow walks the project respecting `.gitignore` + the same safety list as the write tools. Chunks each file into ~500-token windows (200 token overlap). Caps: 10MB total content, 1000 files per project. Batches up to 128 chunks per Voyage request.
+- **Incremental re-index** via chokidar file watcher (2s debounce per change).
+- **Per-user, per-project isolation** — Supabase RLS scopes every row to the authenticated user; the `codenow_code_index_search` RPC also enforces user_id explicitly so even an accidental missing filter at the API layer can't leak across users.
+
+**New tool: `semantic_search(query, topK?=8)`**
+
+Wired into the agent loop. When SMART-Code wants to find relevant code, it can now call `semantic_search("authentication and login flow")` and get back the top-K most semantically related chunks — not a regex grep. `grep_code` stays for exact-string searches (file path, function name, error message); `semantic_search` is for natural-language queries.
+
+**For local-mode users:** run `ollama pull nomic-embed-text` once. CodeNow detects Ollama on `http://localhost:11434` and uses it. No internet round-trips.
+
+**Cost (cloud users):** ~$0.04-0.12 to index a 500-file repo once; cents per session for incremental re-index. At 1,000 users: ~$120/month for indexing. Pre-work is well inside the $9.99/seat economics.
+
+---
+
+## 5. Routing transparency drawer
+
+The model-tag pill on every SMART-Code answer (e.g. `SMART-Code · GPT`) is now **clickable**. It opens a right-side drawer that shows the routing decision in full:
+
+- **Header**: `Routing decision · <provider>/<model>`
+- **Reason line**: `Routed to <provider> because: <decidedReason> matched` (or `Manually pinned by user` if explicit, or `Default: speed wins for short turns` if no signal matched)
+- **Signal table** — six rows, one per signal:
+
+| Signal | When it matches | Routes to |
+|---|---|---|
+| `FAST_INTENT` | "explain", "format", "rename", "write a test", "complete"… | Haiku |
+| `DEEP_INTENT` | "refactor", "architect", "design", "review", "migrate"… | GPT-5 |
+| `REASONING` | "why", "trade-off", "race condition", "root cause", "invariant" | GPT-5 |
+| `HUGE_CONTEXT` | Total input > 8K chars (~2K tokens) | GPT-5 |
+| `LONG_THREAD` | More than 5 user turns in this conversation | GPT-5 |
+| `STACK_TRACE` | Stack trace + more than 1 file referenced | GPT-5 |
+
+Each row shows whether it matched (✓ / ✗) and the evidence — the matched substring with ~20 chars of context (e.g. `"...let's refactor the auth..."`), or `total: 9482 chars` for HUGE_CONTEXT, or `7 user turns` for LONG_THREAD. The winning row is highlighted.
+
+ESC, backdrop click, or X button to close.
+
+**Why this matters:** other tools route models silently. You ask a question, an answer appears, and you have no idea why this lab vs that lab. CodeNow's whole positioning is *we show you*. This drawer makes the routing decision auditable on every single turn.
+
+The matching server-side change: `smartRoute(messages)` now returns `{ provider, trace, decidedReason }` instead of a bare string, and the first SSE event of every chat stream is `event: routing` with the trace + reason + a `isExplicit: true|false` flag for user-pinned cases.
+
+---
+
+## What's coming in v0.1.39
+
+Three items, focused:
+
+1. **Speculative dual-execution** (the deferred half of v0.1.38 item #5) — when the router picks GPT-5 (slow path), fire Haiku in parallel; show Haiku's draft instantly, swap to GPT only when GPT's answer disagrees substantially. Perceived speed jump vs Windsurf without owning their inference stack. Cost-control gates: disabled when `permissionMode === 'full'`, disabled when tools are attached, env kill-switch `SPECULATIVE_DUAL_EXEC_DISABLED`.
+2. **ServiceNow Build Agent SDK** kit — embed as a first-class harness in the kit picker.
+3. **Salesforce Agentforce DX** kit — same.
+
+Both #2 and #3 need OAuth-against-tenant + deploy-first-then-test flows, which is structurally heavier than the existing five local-process kits. Scoped here so v0.1.39 has a coherent enterprise-harness theme.
