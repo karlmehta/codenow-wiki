@@ -1,0 +1,293 @@
+---
+title: v0.1.46 — Token Economics + Agent Fleet + Built-in AGP Governance
+---
+
+# v0.1.46 — Token Economy Index, persisted workspace, AGP as the built-in governance layer
+
+**Released 2026-05-29.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.45 happens on next launch.
+
+This is the **economics + governance** release.
+
+For ten releases since v0.1.38 the SMART-Code surface has been the headline. v0.1.46 turns the camera around: instead of *what the assistant can do*, this release is about *what every turn costs you* — and what runs alongside every agent in your Fleet to keep it safe. Two themes:
+
+1. **Token Economy Index (Phase 0 + Phase 1)** — `buildRepoContext` now returns tiered context, `sendCloud` emits Anthropic prompt-cache control markers at static / semi-static boundaries, and the routing drawer gets a per-turn token-economy panel.
+2. **AGP (Agent Governance Plane) by TrustModel, built-in** — Edge sidecar Docker runner, standalone AGP CLI, Fleet-level governance scaffold, and a verified `/install` API contract against the QA control plane. Every agent in your Fleet view will get a TrustScore next release.
+
+Plus a long-overdue piece of polish: **open editor tabs and SMART-Code chat history now persist** across project switches and across app restarts. CodeNow now reopens where you left it.
+
+---
+
+## What changed since v0.1.38
+
+The wiki skipped seven releases. Here is the arc in one screen, before the v0.1.46 deep-dive.
+
+| Release | Theme | Big swing |
+|---|---|---|
+| **v0.1.39** | SMART-Code speed | Speculative dual-execution (Haiku + GPT in parallel, swap on disagreement). Codebase Map dashboard. |
+| **v0.1.40** | Cross-project view | **Agent Fleet** — one screen, every agent, every project. **Agent Foundry** rename for the build surface. Build-tab self-serve. |
+| **v0.1.41** | Terminal stability | Permanent SIGHUP / job-control warning fix in the embedded terminal (long-running PTY children no longer spam stderr on focus change). Fleet UX polish. |
+| **v0.1.42** | Memory + skills | **EPIC-A** append-only memory ledger (`<codenow-memory>` sigils). **EPIC-B** Skillify wiki + retriever. **EPIC-C** Promotion modal for graduating skills. |
+| **v0.1.43** | Re-tag | 4-segment semver `v0.1.42.1` broke auto-update channel detection. Re-cut as a clean `v0.1.43`. No code change vs. .42. |
+| **v0.1.44** | Cross-agent context | **SMART-Code** now folds the v0.1.42 knowledge bundle + memory ledger into `buildRepoContext`. Auto-detect scanner re-tuned — the HealthAI false-positive is gone and three new framework detectors landed. |
+| **v0.1.45** | Reliability + Fleet | Cursor-missing bug fix (PTY exit detection + auto-rebuild in Claude+Terminal tabs). **FLT-9** built-in agents in Fleet view. Browser default flipped to `codenow.pro`. `file://` scheme support. **FLT-7** per-framework scan toggle. |
+| **v0.1.46** | Economics + governance | This release. |
+
+The throughline: v0.1.39–v0.1.42 expanded what the assistant *knows*; v0.1.44–v0.1.46 wire that knowledge into a **cost-aware, governed** runtime.
+
+---
+
+## v0.1.46 — Token Economy Index
+
+The single most expensive thing CodeNow does is mint Anthropic / OpenAI tokens on your behalf. Until this release, every SMART-Code turn re-sent the full repo context as a fresh, uncached `system` prompt. Long sessions paid full input price for context that hadn't changed in 40 minutes.
+
+v0.1.46 ships **Phase 1** of the Token Economy Index — the structural fix — and **Phase 0** of the observability layer that proves it.
+
+### Phase 1 — Tiered context + Anthropic prompt caching
+
+`buildRepoContext` used to return one flat string. It now returns:
+
+```js
+{
+  static:     '...persona + project ID + CLAUDE.md...',
+  semiStatic: '...knowledge bundle + dir listing...',
+  volatile:   '...active file path + last 15 ledger entries...',
+}
+```
+
+`sendCloud` assembles the `system` field as **Anthropic content blocks** with `cache_control: { type: 'ephemeral' }` markers at the static / semi-static boundaries:
+
+| Tier | Contents | Cache marker | Why |
+|---|---|---|---|
+| **static** | Persona instructions, project ID, `CLAUDE.md` | `cache_control: ephemeral` after this block | Doesn't change inside a session — should be a cache hit every turn after the first. |
+| **semi-static** | Knowledge bundle (Skillify retriever output), top-level directory listing | `cache_control: ephemeral` after this block | Changes ~once per session when files move or skills update. Still cached across most turns. |
+| **volatile** | Active file path, last 15 entries of the memory ledger | No marker | Cycles every turn; would invalidate any cache key it touched. |
+
+The boundary at the end of `semi-static` means Anthropic computes the cache key over `static + semi-static`. If only `volatile` changed (you typed a follow-up), the prefix hits cache and Anthropic bills cache-read price (~10% of input) instead of full input price.
+
+**Targets (not yet measured in prod):**
+
+| Metric | Target | Status |
+|---|---|---|
+| Cache hit rate, multi-turn session | **> 60%** | Phase 0 telemetry shipping in this release; numbers will land in v0.1.47 dashboard. |
+| Input cost per session | **≥ 3× reduction** | Same. |
+| First-turn latency | No regression | Measured on internal smoke; flat. |
+
+The Phase 1 wiring is in `sendCloud` (`site/api/codenow-code/chat.js`) and `buildRepoContext` (renderer-side `services/repoContext.js`).
+
+### Phase 0 — Per-turn usage panel in the routing drawer
+
+The routing drawer that v0.1.38 introduced now has a second panel: **Token economy (this turn)**.
+
+Server emits a `done` SSE frame at the end of every chat stream. v0.1.46 extends that frame to optionally include the `usage` object Anthropic / OpenAI return:
+
+```
+event: done
+data: {
+  "usage": {
+    "input_tokens": 18421,
+    "output_tokens": 612,
+    "cache_creation_input_tokens": 18033,
+    "cache_read_input_tokens": 0
+  }
+}
+```
+
+The renderer parks this on `routingInfo.usage`. The drawer renders:
+
+| Row | Source |
+|---|---|
+| Input | `usage.input_tokens` |
+| Output | `usage.output_tokens` |
+| Cache read | `usage.cache_read_input_tokens` |
+| Cache write | `usage.cache_creation_input_tokens` |
+| Cache hit % | `cache_read / (cache_read + input)` |
+
+**Important honesty constraint:** the server may not always emit `usage` (older serverless deploy, OpenAI route with tools where the SDK strips it). The panel is **conditionally rendered**. If no `usage` object arrives, the panel hides — we do not fabricate `0 / 0 / —`. No faked numbers.
+
+### Strategy reference — `$ / resolved-task`
+
+Internal note for anyone reading the code: the published USP for SMART-Code is **`$ per resolved task`**, not `$ per token`. Token Economy Index is the *instrument*; `$ / resolved-task` is the *axis*. Phase 2 (next release) wires the resolved-task counter — until then, the drawer reports tokens; the pricing page reports tasks; the two are not yet joined.
+
+---
+
+## v0.1.46 — Persistence (open tabs + chat history)
+
+A long-standing rough edge: switch project, lose context. v0.1.46 closes it.
+
+### Open editor tabs + active file
+
+`settings.projectStates[projectId]` now stores:
+
+```js
+{
+  openTabs: ['src/auth.ts', 'src/auth.test.ts', 'README.md'],
+  activeFile: 'src/auth.ts',
+  lastOpenedAt: 1716998400000,
+}
+```
+
+- Written on every tab open / close / focus change (debounced 500ms).
+- Read by `switchProject(projectId)` — restored tabs open in the same order, active file gets focus.
+- Survives app restart (it's in `~/.codenow/settings.json`).
+
+If a file in the saved set no longer exists, the restore quietly drops it (no error toast — the project moved on).
+
+### SMART-Code chat history
+
+Per-project, per-mode, capped at 100 messages:
+
+```
+<projectRoot>/.codenow/sessions/smart-code-cloud.json
+<projectRoot>/.codenow/sessions/smart-code-local.json
+```
+
+| Field | Value |
+|---|---|
+| Path | `<project>/.codenow/sessions/smart-code-<mode>.json` |
+| Modes | `cloud`, `local` — separate files so switching modes doesn't pollute the other history |
+| Cap | 100 messages (oldest evicted FIFO) |
+| Schema | Same shape as the in-memory `messages` array — `{ role, content, toolCalls?, routingInfo? }` |
+
+Restored on project open. Cleared by the existing **Clear chat** action in the SMART-Code header (it now also unlinks the file on disk).
+
+Why per-project on disk and not in `~/.codenow/settings.json`: chat transcripts can hit hundreds of KB; settings.json is hot-read on every app start. Keeping chat under `<project>/.codenow/` also means a project move-or-share carries its own history.
+
+---
+
+## v0.1.46 — AGP by TrustModel, built-in
+
+The strategic shift in this release: **TrustModel's AGP (Agent Governance Plane) is now CodeNow's built-in agent-governance layer**. Not an integration. Not an add-on. Built-in.
+
+Three pieces shipped:
+
+### 1. AGP client + Fleet governance scaffold (TRUS-1042)
+
+A new `agp/` module under the renderer wraps the TrustModel `/install` API and exposes a typed client:
+
+| Method | Purpose |
+|---|---|
+| `agp.install(agentDescriptor)` | Register an agent with the control plane; returns `{ agentId, trustScore?, governancePolicy }` |
+| `agp.status(agentId)` | Current TrustScore + active policy violations |
+| `agp.attach(agentId)` | Returns the Edge sidecar IPC handle for streaming telemetry |
+
+The Fleet view (introduced v0.1.40) now reserves a column for **Governance** — empty in this release, populated by the TrustScore badge UI shipping in v0.1.47.
+
+### 2. Edge sidecar — Docker runner + IPC layer (TRUS-1044 / TRUS-987)
+
+Every agent in the Fleet runs inside a **TrustModel AGP Edge sidecar**:
+
+| Component | What |
+|---|---|
+| **Docker runner** | Spawns the AGP Edge container alongside each Fleet agent; mounts a shared IPC socket. |
+| **IPC layer** | Newline-delimited JSON over Unix domain socket (or named pipe on Windows). Agent emits prompt + response; Edge emits governance verdict + telemetry frame back. |
+| **Telemetry forward** | Edge batches + forwards to the AGP control plane; verdict path is synchronous so a block ruling can short-circuit a response before it leaves the agent. |
+
+The runner is **opt-in per agent** in this release — flipping the `governance: 'agp'` flag in an agent's config wires the sidecar at next start. Default is `governance: 'none'` to keep existing Fleets unchanged.
+
+### 3. Standalone AGP CLI
+
+`codenow agp` is a standalone subcommand that launches an Edge sidecar **without** a parent CodeNow process — for CI agents, ServiceNow Build Agent harnesses, and any externally hosted agent that wants TrustScore coverage.
+
+```
+codenow agp run \
+  --agent-id <id> \
+  --policy <policy-id> \
+  --endpoint https://api-trustmodel.pdxqa.com
+```
+
+Same Docker image, same IPC contract, no CodeNow desktop dependency.
+
+### 4. `/install` API contract — verified on QA
+
+Wire-level contract is verified live against `https://api-trustmodel.pdxqa.com`:
+
+| Endpoint | Verb | Verified |
+|---|---|---|
+| `/install` | POST | shipped |
+| `/agents/:id/status` | GET | shipped |
+| `/agents/:id/telemetry` | POST (sidecar only) | shipped |
+
+Production endpoint (`api.trustmodel.ai`) accepts the same payloads; the CodeNow client switches via `AGP_ENDPOINT` env override.
+
+### Result
+
+Every agent that runs in Fleet view from this release forward is **eligible** for a TrustScore. The score badge ships in **v0.1.47**. The plumbing — sidecar, IPC, install, telemetry — is in v0.1.46.
+
+This is the first time an IDE has shipped agent-governance as a built-in primitive rather than a Marketplace add-on.
+
+---
+
+## v0.1.39 → v0.1.45 changelog
+
+Terse — for the reader who skipped the wiki for seven releases.
+
+### v0.1.39 — Speculative dual-execution + Codebase Map
+
+- **Speculative dual-exec**: when the router picks GPT-5, fire Haiku in parallel. Show Haiku's draft instantly; swap to GPT only if the answers disagree substantially. Disabled when tools are attached or `permissionMode === 'full'`. Env kill-switch: `SPECULATIVE_DUAL_EXEC_DISABLED`.
+- **Codebase Map dashboard**: a new tab under the project view rendering the v0.1.38 semantic index as a clustered force-graph. Click a cluster to filter SMART-Code to that subtree.
+- Routing drawer gains a `speculative_swap` row when Haiku draft was discarded in favor of GPT.
+
+### v0.1.40 — Agent Fleet + Agent Foundry rename
+
+- **Agent Fleet**: cross-project view of every agent across every CodeNow workspace on this machine. One scrollable list, filter by project / state / kit. The view that v0.1.46's AGP governance column plugs into.
+- **Agent Foundry**: the build surface (formerly "Build tab") renamed. Self-serve agent creation — pick a kit, name it, push to a project — no terminal required.
+- Build-tab self-serve uses the same kit picker as the existing five local-process kits (claude, codex, gemini, aider, cursor).
+
+### v0.1.41 — SIGHUP fix + Fleet UX
+
+- **Permanent fix** for the job-control / SIGHUP warning that v0.1.19 partially addressed. Long-running PTY children (npm run dev, vitest --watch) no longer write `bash: warning: shell level (N) too high` to stderr on focus change. Root cause was the wrapper script trapping SIGHUP and re-emitting; v0.1.41 detaches the PTY with `setsid` on Linux/macOS and the equivalent `CREATE_NEW_PROCESS_GROUP` on Windows.
+- Fleet view: keyboard nav (j/k), bulk-state filter, last-touched sort.
+
+### v0.1.42 — Memory ledger + Skillify + Promotion modal
+
+- **EPIC-A**: append-only memory ledger. SMART-Code emits `<codenow-memory>...</codenow-memory>` sigils that the renderer harvests post-stream and writes to `<project>/.codenow/memory/ledger.jsonl`. Used by buildRepoContext (v0.1.44).
+- **EPIC-B**: Skillify — `~/.codenow/skills/` wiki + retriever. Skills are markdown files with frontmatter; the retriever does BM25 over titles + descriptions and surfaces the top-K into the system prompt.
+- **EPIC-C**: Promotion modal. When a chat thread looks like it should become a reusable skill, SMART-Code suggests promotion — one click writes the markdown file.
+
+### v0.1.43 — Re-tag
+
+- v0.1.42 was originally tagged `v0.1.42.1` for an auto-updater fix. The 4-segment semver broke the channel-detection regex in electron-updater (it expects `\d+\.\d+\.\d+`). Re-cut as `v0.1.43` with identical binary contents.
+- No code change vs. v0.1.42.
+
+### v0.1.44 — SMART-Code cross-agent context + scanner re-tune
+
+- **buildRepoContext** absorbs the v0.1.42 knowledge bundle (Skillify retriever output) and memory ledger (last 15 entries). This is the data structure v0.1.46 then tiers + caches.
+- **Auto-detect scanner**: three new framework detectors (SvelteKit, Astro, RedwoodJS). HealthAI false-positive (it was matching on the literal string "health" in package descriptions) fixed by requiring a `package.json` dep match.
+
+### v0.1.45 — Cursor-missing fix + FLT-9 + browser polish
+
+- **Cursor-missing bug**: when a Claude+Terminal tab's PTY exited (cursor binary upgraded out from under the agent), the tab silently froze. Now detects PTY exit, surfaces a one-line banner, and auto-rebuilds the tab.
+- **FLT-9**: built-in agents (the five local-process kits + Foundry-created ones) now appear in Fleet view alongside externally registered ones.
+- **Browser default** flipped to `codenow.pro` (was `google.com`).
+- **`file://` scheme** support in the embedded browser — local previews open without a dev server.
+- **FLT-7**: per-framework scan toggle in project settings. Disable detectors you don't care about; the scanner skips them on next walk.
+
+---
+
+## Upgrade notes
+
+User-facing behavior that changes in v0.1.46:
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Open tabs restore on project switch** | Everyone | First switch after upgrade — tabs from the current session restore. Older sessions had nothing saved, so the very first restore is empty. |
+| **SMART-Code chat history persists** | SMART-Code users | First open of a project after upgrade — empty (nothing was saved before). Subsequent opens — last 100 messages restored. To clear, use **Clear chat** in the SMART-Code header. |
+| **Token economy panel** | SMART-Code users | The routing drawer (click the model pill) has a new bottom panel. If the server didn't emit `usage` for that turn (older serverless deploy), the panel is hidden — that's expected, not a bug. |
+| **AGP sidecar** | Fleet users with `governance: 'agp'` configured | Docker required. Without Docker, agents with the flag fall back to `governance: 'none'` and log a one-line warning. Existing agents are unaffected (default is `'none'`). |
+| **Anthropic prompt cache** | Cloud-mode SMART-Code users | First turn of a session is slightly slower (cache write). Turns 2+ should be measurably faster + cheaper. No action required. |
+
+Auto-update from v0.1.45 happens on next launch. No migration steps.
+
+---
+
+## What's next — v0.1.47
+
+Three items, scoped:
+
+1. **Token Economics Phase 2 — proactive retrieval.** Instead of stuffing the full knowledge bundle into `semi-static` every turn, run a fast retrieval pass first and only inject the top-K relevant skills. Cuts `semi-static` size; raises cache-hit rate further; cuts first-turn cost. Target: another 2× input cost reduction on long sessions on top of the Phase 1 cache hit.
+
+2. **Cost Cockpit UI.** A dedicated dashboard (under the Codebase Map's neighbor tab) rolling up the per-turn usage panel into per-session, per-day, per-project cost. Joins to the resolved-task counter so `$ / resolved-task` becomes a number you can see, not just a tagline. Depends on Phase 0 emitting `usage` consistently across providers — that work is queued separately.
+
+3. **TrustScore badges in Fleet view.** The UI half of v0.1.46's AGP plumbing. Every Fleet row gets a 0–100 TrustScore badge with a click-through to the governance policy + recent violations. Edge sidecar is already emitting the telemetry — this release just adds the renderer.
+
+Phase 0 telemetry from v0.1.46 — the actual cache-hit %, the actual input cost reduction — will be reported as numbers in the v0.1.47 release notes. No targets posing as results.
