@@ -1,4 +1,5 @@
 export default {
+  'v0-1-51': 'v0.1.51 — Reliability · cross-lab failover · mobile Desktop Relay · grep_code · Anatomy',
   'v0-1-46': 'v0.1.46 — Token Economics + Agent Fleet + Built-in AGP Governance',
   'v0-1-38': 'v0.1.38 — SMART-Code grows up · write tools · semantic codebase index · routing transparency',
   'v0-1-37': 'v0.1.37 — Trial-pill regression · PATH shim · Black icon · /launch landing',

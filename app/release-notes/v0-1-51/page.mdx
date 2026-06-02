@@ -1,0 +1,93 @@
+---
+title: v0.1.51 — Reliability · cross-lab failover · your phone drives the desktop
+---
+
+# v0.1.51 — Reliability: cross-lab failover, mobile Desktop Relay, and a pile of fixes
+
+**Released 2026-06-01.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.50 happens on next launch.
+
+The wiki last stopped at **v0.1.46**. Five releases later, the headline of v0.1.51 is one word: **reliability**. The SMART-Code cloud path now degrades gracefully instead of dying, the provider pills actually do what they say, the agent's code-search tool works again, and a stack of long-standing UI papercuts are gone. Along the way (v0.1.50) your phone learned to drive the desktop.
+
+Catch-up table first, then the v0.1.51 deep-dive.
+
+---
+
+## Since v0.1.46 — the arc in one screen
+
+| Release | Theme | Big swing |
+|---|---|---|
+| **v0.1.47** | Credits + BYOK | Monthly **credit** metering (1 credit = 1,000 tokens). Your own API key (BYOK) is preferred over the server key per turn — and BYOK is always free. |
+| **v0.1.48** | Pricing | Credit-based pricing grid live on codenow.pro. |
+| **v0.1.49** | Import + layout | Real **MCP-server + CLI/stdin agent import** into Business mode (no mocks). The Anatomy card, Threads workbench, and the wide Run/Test/Tools panes were promoted out of the cramped ~300px sidebar into the **main editor area**. OS-detecting `/download` page. 15 ambiguous controls got plain-language tooltips. |
+| **v0.1.50** | Mobile | **M1 Desktop Relay** — send a prompt from the mobile app, your desktop runs the live SMART-Code loop, and the stream mirrors back to your phone. iOS Session composer fixes (soft-keyboard occlusion, squished textarea). |
+| **v0.1.51** | Reliability | This release. |
+
+The throughline: v0.1.47–v0.1.49 expanded the surface (credits, import, layout); v0.1.50–v0.1.51 made it **reach your phone** and **stop breaking**.
+
+---
+
+## v0.1.51 — Cross-lab failover
+
+SMART-Code routes every turn to one of two labs — **Anthropic Haiku 4.5** (speed) or **OpenAI GPT-5** (depth). Until this release, if the chosen lab rejected the request — bad key, rate limit, exhausted quota — the turn died with a raw provider error.
+
+v0.1.51 adds **failover**. When the chosen lab returns a non-2xx **before any tokens have streamed**, CodeNow retries the turn on the other configured lab:
+
+- A rate-limited or quota-exhausted OpenAI now **transparently falls back to Haiku** instead of erroring.
+- The speculative dual-execution path does the same: if the GPT call fails, the Haiku draft that already streamed is **kept** rather than discarded.
+
+The retry only fires *pre-stream*, so a half-streamed answer is never double-written. The result: a single misconfigured or down provider can no longer kill a turn the other lab could serve.
+
+---
+
+## v0.1.51 — The provider pills actually pin the model
+
+The Cloud **LAB** pills (Smart · Haiku · GPT-5) were decorative. The desktop never forwarded your choice to the server, so every turn ran the server's `smart` router regardless of what you picked. Now your selection reaches the server — pick **GPT-5** and you get GPT-5; pick **Haiku** and you get Haiku; leave it on **Smart** and the router decides per task.
+
+---
+
+## v0.1.51 — `grep_code` restored
+
+SMART-Code's `grep_code` tool — which the agent is explicitly told to run before editing, to find every call-site of a change — was reading the wrong field of the search response and **always returned "No matches."** The agent was effectively editing blind.
+
+Fixed: it now returns real results, and the advertised file-glob filter (`*.js`, `src/**/*.ts`) actually restricts the search instead of being ignored.
+
+---
+
+## v0.1.51 — The Anatomy card moves to the editor area
+
+The visual agent **Anatomy card** was rendering squished inside the narrow Agents sidebar (identity tile wrapping to three lines, conversation cards crushed). It now promotes to the **full editor area**, like the Threads workbench. A related view-state bug — opening a git diff permanently flipped the card/editor preference, stranding Anatomy in the sidebar afterward — is also fixed.
+
+---
+
+## v0.1.51 — Visible scrollbars + scroll fixes
+
+App-wide: scrollbars were a near-invisible dark-grey thumb on a black track (~6% contrast) at 8px wide. They're now a **clearly visible, wider** thumb that brightens on hover. The **SMART-Code message pane** also scrolls correctly again — a flexbox `min-height` trap meant the pane grew instead of scrolling, so you couldn't reach older messages.
+
+---
+
+## v0.1.51 — Reliability under the hood
+
+- **Usage metering writes correctly.** Per-turn token accounting now records to the ledger, so the credit meter reflects real usage.
+- **Mobile relay never strands a prompt.** Every phone-driven turn now closes cleanly — including the tool-loop cap and error paths — and the phone shows a **"waiting for desktop approval"** notice when a write needs sign-off on the desktop.
+- **BYOK hardened.** Only a real `sk-` key is ever forwarded as your key — the desktop will no longer pick up an unrelated value from its launch environment.
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Cross-lab failover** | Cloud SMART-Code users | Already live server-side for everyone. If a lab is down/over quota, your turn quietly lands on the other one. |
+| **Provider pills pin the model** | Cloud SMART-Code users | Needs the v0.1.51 build. After updating, the LAB pills control routing. |
+| **`grep_code` works** | SMART-Code users | Needs the v0.1.51 build. The agent finds code before editing instead of guessing. |
+| **Anatomy in the editor area** | Agents-panel users | Needs the v0.1.51 build. The card opens wide; the Card/Code toggle still swaps back to the file editor. |
+| **Scrollbars + chat scroll** | Everyone | Needs the v0.1.51 build. |
+
+Auto-update from v0.1.50 happens on next launch. No migration steps. The **failover + metering** fixes are server-side and already apply to every client; the desktop fixes ship in the v0.1.51 build.
+
+---
+
+## What's next
+
+- **Remote approval from the phone** — approve a write from the mobile Session, not just the desktop modal (v0.1.51 shows the "waiting" notice; the approve button on mobile is the next slice).
+- **MCP HTTP/SSE import sources** — stdio + CLI/stdin landed in v0.1.49; hosted transports are queued.
