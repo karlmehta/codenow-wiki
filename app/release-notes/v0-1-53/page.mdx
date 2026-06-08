@@ -1,0 +1,62 @@
+---
+title: v0.1.53 — Agents lifecycle rail · drag-a-file context · phone approvals
+---
+
+# v0.1.53 — A clearer Agents panel, drag-a-file context, and your phone can finally approve
+
+**Released 2026-06-08.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.52 happens on next launch.
+
+Two cycles since v0.1.51. The headline of **v0.1.53** is the Agents panel finally making sense — a lifecycle rail instead of a wall of tabs — plus a small change that punches above its weight: **drag any file into the SMART-Code chat to ground the agent on it.** Along the way (v0.1.52) the mobile loop closed: you can now **approve the agent's writes from your phone**, not just watch them.
+
+Catch-up first, then the v0.1.53 deep-dive.
+
+---
+
+## v0.1.52 — the mobile loop closes
+
+The v0.1.51 notes ended on *"approve a write from the mobile Session, not just the desktop modal."* That's now shipped.
+
+| Change | What it does |
+|---|---|
+| **Remote write-approval from your phone** | When the desktop agent wants to write a file, the approve/reject prompt now reaches the **mobile Session** too. It's **race-both** — whoever responds first (desktop modal or phone) wins, and the other dismisses. The "waiting for desktop approval" dead-end from v0.1.51 is gone. |
+| **Desktop Relay stays online** | A keepalive + concurrency guard fixes the phone↔desktop session dropping mid-run. Long sessions no longer silently go stale. |
+| **Viral promo codes** | New self-serve referral codes at signup. **`FOUNDERS10K`** grants **4 months free** — share it with anyone you want on the beta. |
+
+---
+
+## v0.1.53 — the Agents panel, reorganized
+
+The Agents panel had grown to **14 horizontal tabs** crammed across the top — easy to lose your place, and the row overflowed on narrower windows. v0.1.53 replaces it with a **lifecycle navigation rail** that walks an agent through its life in order:
+
+**Anatomy → Run → Test → Runs → Trace → Evals → Tools → Prompts → Skills → Publish**
+
+You always know where you are in the flow, the rail never overflows, and a couple of long-standing nav papercuts went with it: a **stale hardcoded version string** in the panel is gone, and the **duplicate horizontal/vertical nav** that showed the same destinations twice is consolidated. General menu cleanup throughout.
+
+---
+
+## v0.1.53 — drag a file into SMART-Code for instant context
+
+You can now **drop a file (or several) straight into the SMART-Code chat**. Each dropped file becomes a **context chip** above the composer, and its contents are sent to the agent as grounding **before** it answers or edits — no more pasting a whole file into the prompt or hoping the agent greps for it.
+
+This is the fastest way to point the agent at exactly the code or doc you mean. Drop a config, a failing test, a spec — the agent reads it as part of the turn.
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Agents lifecycle rail** | Agents-panel users | Needs the v0.1.53 build. The 14 tabs become an ordered rail; same destinations, clearer path. |
+| **Drag-a-file context** | SMART-Code users | Needs the v0.1.53 build. Drop files into the chat; they appear as context chips and ground the turn. |
+| **Phone write-approval** | Mobile + Desktop Relay users | Shipped v0.1.52. Approve/reject reaches the mobile Session; race-both with the desktop modal. |
+| **Relay keepalive** | Mobile + Desktop Relay users | Shipped v0.1.52. Sessions stay online through long runs. |
+| **`FOUNDERS10K` promo** | Anyone signing up | Live on codenow.pro signup — 4 months free. |
+
+Auto-update from v0.1.52 happens on next launch. No migration steps.
+
+---
+
+## What's next
+
+- **In-app signup honoring invites + promo codes** — admin invite links and codes now grant the right plan on direct signup (landed just after the v0.1.53 tag; ships in the next build).
+- **MCP HTTP/SSE import sources** — stdio + CLI/stdin landed in v0.1.49; hosted transports are still queued.
