@@ -1,0 +1,96 @@
+---
+title: v0.1.54 — Kimi & Qwen models · drag-portable Foundry agents · screenshots · cross-agent context
+---
+
+# v0.1.54 — More models, portable agents, screenshots in chat, and an end to the random sign-outs
+
+**Released 2026-06-10.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.53 happens on next launch.
+
+The biggest model news since dual-lab routing: **open-weight coders Kimi K2 and Qwen (via Fireworks) are now first-class everywhere a model runs** — SMART-Code, Cmd+K inline edits, autocomplete, and the multi-model Studio. Alongside that, the Agent Foundry learned two tricks (**drag an agent into another project**, and an **auto-generated run walkthrough**), SMART-Code can now **read screenshots** and **pick up where your other AI agents left off**, there's a **light theme**, and a cluster of reliability fixes — including the one a lot of you flagged: **getting signed out every few hours is fixed.**
+
+---
+
+## Kimi K2 + Qwen coders, everywhere
+
+Three open-weight coding models (served by Fireworks) are now selectable across the whole product:
+
+- **Kimi K2** — strong general coder
+- **Qwen3-Coder-480B** — large, capable
+- **Qwen2.5-Coder-32B** — fast and cheap
+
+Where they show up:
+
+| Surface | How |
+|---|---|
+| **SMART-Code** | "Kimi" lab pill in the cloud picker — CodeNow-served and **metered in credits** (no key needed), or use your own key |
+| **Cmd+K inline edit** | New inline model picker — click the model label to switch (your choice persists) |
+| **Autocomplete** | Opt-in alternative to the default Haiku fast-lane |
+| **Studio** (multi-model) | Run them side-by-side against Claude / GPT / Gemini |
+
+**Bring your own key** anytime: set `FIREWORKS_API_KEY` in AI provider keys and every surface above uses it directly (BYOK is always free).
+
+---
+
+## Agent Foundry — drag agents between projects, and an auto walkthrough
+
+**Drag-portable agents (P1).** Built an agent in one project and want it in another? **Drag its row onto the drop bar** and CodeNow copies the agent's manifest into the target project — no re-scaffolding, no copy-paste.
+
+**Auto walkthrough + summary card (P2).** After a run, the Foundry now generates a **✨ Summary card** — a plain-English walkthrough of what the agent actually did, digested from the latest recorded run. A fast way to see "what happened" without scrubbing the full replay.
+
+---
+
+## SMART-Code can read screenshots
+
+**Paste or drop an image** straight into the SMART-Code chat — a screenshot of an error, a design, a diagram — and the agent reads it as part of the turn (Haiku 4.5 + GPT-5-mini both see it). Dropped images become vision attachments instead of useless file-path chips.
+
+---
+
+## SMART-Code picks up where your other agents left off
+
+New **cross-agent context continuity**: SMART-Code now reads your accumulated project context — `~/.claude` memory, recent transcripts, nested `CLAUDE.md` files, and the claude-mem ledger — so it **continues the thread** instead of starting cold. If you've been working with Claude Code, Codex, or Gemini on a project, SMART-Code arrives already knowing the history. Toggle it with the **Continuity** pill in the model picker (on by default).
+
+---
+
+## A light theme
+
+Prefer a bright editor? There's now a **white/light theme** — switch it from the Theme picker in Settings.
+
+---
+
+## Fixes that matter
+
+| Fix | What changed |
+|---|---|
+| **No more random sign-outs** | Running the dev build and the installed app side-by-side (or just unlucky timing) could sign you out every few hours as the two raced on a rotating refresh token. The session now survives that race — you're only sent to sign-in when the session is genuinely unrecoverable. |
+| **SMART-Code chat: copy/paste, scrollbar, drag** | The transcript was rebuilt on every update, which wiped your text selection mid-copy and yanked you to the bottom while reading. It now re-renders without destroying selection or scroll, the scrollbar stays put, and drops are owned cleanly. |
+| **File drops land in the right project** | A file dropped on a terminal no longer ends up in a different project's terminal. |
+| **Screenshot 400s floored** | A SMART-Code edge case that returned an "empty content blocks" API error is fixed. |
+| **In-app signup honors invites + promo codes** | Admin invite links and promo codes now grant the right plan on direct signup. |
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Kimi / Qwen models** | Everyone | Needs the v0.1.54 build. Pick the Kimi lab pill (metered) or set `FIREWORKS_API_KEY` for BYOK. |
+| **Drag-portable Foundry agents + Summary card** | Agent Foundry users | Needs the v0.1.54 build. |
+| **Vision / screenshots** | SMART-Code users | Needs the v0.1.54 build. Paste or drop an image into the chat. |
+| **Cross-agent context** | SMART-Code users | On by default; toggle with the Continuity pill. |
+| **Light theme** | Anyone | Settings → Theme picker. |
+| **Sign-out / chat fixes** | Everyone | Automatic with the v0.1.54 build. |
+
+Auto-update from v0.1.53 happens on next launch. No migration steps.
+
+---
+
+## Under the hood
+
+The release pipeline now **gates every build on the full test suite** — smoke (240+ cases) plus both end-to-end journeys must pass on the tagged commit before any platform binary is built, signed, or published. A version can no longer ship red.
+
+---
+
+## What's next
+
+- **MCP HTTP/SSE import sources** — stdio + CLI/stdin landed in v0.1.49; hosted transports are still queued.
+- **Stripe billing + tier enforcement** in the desktop app.

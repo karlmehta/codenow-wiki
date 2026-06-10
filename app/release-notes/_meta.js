@@ -1,4 +1,5 @@
 export default {
+  'v0-1-54': 'v0.1.54 — Kimi & Qwen models · drag-portable Foundry agents · screenshots · cross-agent context',
   'v0-1-53': 'v0.1.53 — Agents lifecycle rail · drag-a-file context · phone write-approval',
   'v0-1-51': 'v0.1.51 — Reliability · cross-lab failover · mobile Desktop Relay · grep_code · Anatomy',
   'v0-1-46': 'v0.1.46 — Token Economics + Agent Fleet + Built-in AGP Governance',
