@@ -1,0 +1,71 @@
+---
+title: v0.1.55 — One-click light/dark · no more stuck "session expiring" · clickable invite links
+---
+
+# v0.1.55 — A real theme switch, an end to the stuck "session expiring" loop, and invite links that actually open
+
+**Released 2026-06-15.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.54 happens on next launch.
+
+A focused reliability + polish cut. The light theme that landed in v0.1.54 is now a **proper one-click toggle** on the topbar (and the theme picker can finally be closed). The "Session expiring soon — sign in again" loop that some of you hit **while still signed in** is fixed at the root. And the **Accept invitation** button in project-invite emails is clickable again instead of a dead link.
+
+---
+
+## A real light/dark toggle
+
+The **Theme** button in the topbar now flips the whole app between dark and light in **one click**, with a live label (🌙 Dark / ☀️ Light) so you always know what the next click does. The editor color-scheme picker (Monaco themes, Import VS Code theme…) moved to **⚙ Editor → "Editor theme…"**, where it belongs — and that picker now has a close button and click-outside-to-dismiss, so it's no longer a dead-end modal.
+
+---
+
+## No more stuck "session expiring" loop
+
+If your sign-in token quietly went stale — most often from running the dev build and the installed app side by side, which race on a rotating refresh token — the app could land in a **zombie session**: you *looked* signed in, but every server action (Share, JIRA, cloud SMART-Code) failed with an auth error and the "Session expiring soon" banner kept coming back, with no way out short of quitting.
+
+v0.1.55 makes a genuinely dead session **resolve itself**: when the refresh chain has been failing *and* your token is actually expired for a sustained window, CodeNow signs you out cleanly to the login screen so one sign-in fully restores you — instead of stranding you in the half-broken middle. Crucially, this is **conservative**: a brief network blip or a momentary server hiccup never signs you out — only a chain that stays dead does.
+
+---
+
+## Invite links that actually open
+
+The **Accept invitation** button in project-collaboration emails pointed at a `codenow://` deep link, which Gmail and most webmail clients silently refuse to make clickable — so the button did nothing and you had to copy the raw link by hand. Invites (both the email button and the in-app **Copy invite link**) now use a normal **https** link to the `/join` page, which accepts the invite and hands installed users into the app. Clickable everywhere.
+
+---
+
+## Honest Windows install experience
+
+While Windows code-signing is being set up, the download page no longer claims the Windows build is "signed," and it now includes a short **"Windows protected your PC? → More info → Run anyway"** guide so you can install today. Signed Windows builds are coming shortly (see below).
+
+---
+
+## Fixes that matter
+
+| Fix | What changed |
+|---|---|
+| **Stuck "session expiring" loop** | A dead refresh chain now ends in a clean sign-out (one sign-in restores you) instead of an endless banner with every action failing. Network blips never sign you out. |
+| **Theme picker dead-end** | The editor-theme modal had no close button and no click-outside-to-dismiss — you could get stuck in it. Both added. |
+| **Invite "Accept" button dead in email** | Switched from `codenow://` (stripped by webmail) to an https `/join` link. |
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **One-click light/dark** | Anyone | Topbar **Theme** button toggles instantly. Editor color schemes moved to ⚙ Editor → "Editor theme…". |
+| **Session fix** | Everyone | Automatic with the v0.1.55 build. If you're currently stuck on an old session, sign in once after updating. |
+| **Invite links** | Anyone sharing a project | Automatic — new invite emails and copied links use https. |
+
+Auto-update from v0.1.54 happens on next launch. No migration steps.
+
+---
+
+## Under the hood
+
+The release pipeline's full-suite gate did its job this cycle: a too-aggressive version of the session fix was **caught and blocked by the end-to-end journeys before any binary shipped**, then fixed and re-cut. Smoke (240+ cases) plus both E2E journeys must pass on the tagged commit before anything is built, signed, or published — a version can't ship red.
+
+---
+
+## What's next
+
+- **Windows code signing** via Azure Trusted Signing — the build pipeline is wired and waiting on account setup; once active, the SmartScreen "unknown publisher" warning goes away.
+- **MCP HTTP/SSE import sources** — stdio + CLI/stdin landed in v0.1.49; hosted transports are still queued.
+- **Stripe billing + tier enforcement** in the desktop app.
