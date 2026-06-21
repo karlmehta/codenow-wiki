@@ -1,0 +1,87 @@
+---
+title: v0.1.56 — Agent Foundry, rebuilt as a guided step-by-step builder
+---
+
+# v0.1.56 — Build a production agent step by step, and own the harness
+
+**Released 2026-06-20.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.55 happens on next launch.
+
+The Agent Foundry was powerful but it didn't tell you where to start. v0.1.56 turns its empty state into a **guided, step-by-step builder**: at every step it says **what you're building**, **which step is next**, and lets you **jump back to any earlier step to edit**. Along the way it quietly decodes the buzzwords you hear every day — *harness engineering, context engineering, skills, knowledge, MCP, sub-agents* — on the exact step where each one lives.
+
+The through-line is ownership: CodeNow helps you **build and own your own harness** — a unique multi-model, multi-vendor agent — instead of getting locked into a one-click "managed agent" where it's easy but you don't see inside and don't really own anything.
+
+---
+
+## A 9-step guided build
+
+Open a project with no agent yet → the Agents panel now walks you through nine steps, with a clickable progress rail so you always know where you are and can go back to edit:
+
+1. **Choose your harness** — pick the SDK that becomes your agent's spine (Claude Agent SDK · Google ADK 2.0 · Cursor SDK · Microsoft Agent Framework), each with a plain-language "best for" and a **lock-in badge**.
+2. **Orchestrator** — CodeNow scaffolds the real agent file (`agent.ts` / `agent.py`) from your chosen kit. Runnable today, yours forever. (Prefer plain language? Describe the goal and CodeNow drafts and writes it.)
+3. **Model & Reasoning** — multi-model with your own keys, plus a fallback so one provider's outage can't take your agent down.
+4. **Knowledge & Memory** — ground the agent in your own documents, data, and indexed codebase (RAG) so it answers with facts a generic model can't know.
+5. **Tools & Connections** — give it real actions over **MCP**, the open standard that keeps your connectors portable instead of locked to one platform's catalog.
+6. **Sub-agents** — add helpers the orchestrator can delegate focused tasks to, and keep adding more as the job grows.
+7. **Guardrails & Oversight** — visual limits on what the agent can touch and do, sent as a system prompt on every run, with per-run TrustScores from TrustModel.ai (auto-provisioned, no key to paste) and a human kept in the loop.
+8. **Observe & Test** — every run captured to a replayable, forkable record, and evals that score the agent across models so you can prove what works.
+9. **Deploy & use daily** — use it right here in CodeNow, publish the harness to **Agent21**, or ship it to a cloud you control.
+
+---
+
+## The buzzwords, decoded where they live
+
+Every step opens with one plain sentence a non-developer gets instantly — *what is a harness, what is context engineering, what is MCP, what is RAG* — tied to the block you're building. No glossary to go read; the explanation is on the step.
+
+---
+
+## Own your harness, don't rent one
+
+Step 1 makes CodeNow's stance explicit. A one-click "managed agent" (Google's Antigravity Managed Agents are the clearest 2026 example — "manage the mission, not the machine") is fast: you POST a config and the vendor provisions and runs the agent in *their* sandbox. The honest trade-off is that you don't see inside the harness, you don't own the orchestration IP, and the managed tier runs on the vendor's own model — so switching later means rebuilding.
+
+CodeNow takes the other path: an ownable, **multi-model, multi-vendor** harness whose code, tools, and logic are yours. That ownership is also what makes real human oversight possible — when the harness is yours and not a black box, you can see every run, train it, set guardrails, and override it. Inline guidance on the step helps you choose between **Google ADK 2.0 / Antigravity** and the **Anthropic Claude Agent SDK** honestly, without pushing you toward a tier that locks you in.
+
+---
+
+## Deploy where *you* have credits
+
+The final step covers daily use and deployment honestly — real where we automate it, real commands where you run them:
+
+| Target | What you get |
+|---|---|
+| **Agent21** | One-click publish of your harness manifest to the marketplace so teammates can run, fork, or subscribe — the source stays in your repo. |
+| **Google Cloud Run** | `gcloud run deploy --source .` builds your harness, pushes to *your* registry, and deploys — scales to zero, HTTPS out of the box. $300 free trial + an always-free monthly tier. |
+| **AWS App Runner** | Build your container, push to *your* ECR, run it on a managed runtime you own. AWS Activate credits ($1k–$100k) + Free Tier. |
+| **Azure Container Apps** | `az containerapp up --source .` builds, provisions, and deploys in one command. $200 free credit + a monthly free grant. |
+
+Each cloud shows the real, copy-to-terminal commands and its actual free-credit program. You own the image and the runtime — there's no managed-agent box in the loop.
+
+---
+
+## Honest about what's real today
+
+No mocks. **Steps 1–2 create real code** (scaffold a runnable orchestrator, or describe-and-draft one). **Steps 3–9 explain each block and route you straight into the already-shipped surfaces** — the multi-model studio, Tools, Knowledge, Business-mode Guardrails, Runs/Replay, Evals, and Publish — rather than faking an inline editor that doesn't exist yet. Capturing each block's config inline, and native drag-to-compose sub-agents, are the next phase.
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Guided Foundry builder** | Anyone creating an agent | Open a project with no agent → the Agents panel is now the 9-step guided builder. The old three-card empty state is gone. |
+| **Everything else** | Everyone | This is a renderer-only release — no migration, no behavior change to existing agents. |
+
+Auto-update from v0.1.55 happens on next launch. No migration steps.
+
+---
+
+## Under the hood
+
+Renderer-only change, gated the same way every release is: full smoke (240+ cases) plus both end-to-end journeys must pass on the tagged commit before anything is built, signed, or published. The first build of this tag was blocked by a flaky browser-navigation step in the journeys, re-run clean, then shipped — a version can't go out red.
+
+---
+
+## What's next
+
+- **Inline per-block config** — let steps 3–9 capture each block's settings in the wizard, not just route out to the shipped surface.
+- **Native sub-agent composition** — drag-to-compose orchestration via Google ADK 2.0 Collaborative Workflows.
+- **Windows code signing** via Azure Trusted Signing — wired and waiting on account setup.

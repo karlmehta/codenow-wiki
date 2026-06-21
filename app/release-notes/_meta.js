@@ -1,4 +1,5 @@
 export default {
+  'v0-1-56': 'v0.1.56 — Agent Foundry, rebuilt as a guided step-by-step builder',
   'v0-1-55': 'v0.1.55 — One-click light/dark · no more stuck "session expiring" · clickable invite links',
   'v0-1-54': 'v0.1.54 — Kimi & Qwen models · drag-portable Foundry agents · screenshots · cross-agent context',
   'v0-1-53': 'v0.1.53 — Agents lifecycle rail · drag-a-file context · phone write-approval',
