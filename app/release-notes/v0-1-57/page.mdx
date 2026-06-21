@@ -1,0 +1,52 @@
+---
+title: v0.1.57 — Agent memory substrate (the memory frontier, made real)
+---
+
+# v0.1.57 — Your agents stop forgetting
+
+**Released 2026-06-20.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.56 happens on next launch.
+
+A model is a brain you rent — you and your competitor rent the same one. The memory system is the part you own, and it's where an agent's value compounds. v0.1.57 makes memory a **first-class, managed substrate** for the agents you build in the Foundry: they accumulate knowledge instead of just accumulating logs, and you don't hand-wire any of it.
+
+Plus two on-ramp wins: the moment you create an agent you land on **running it**, and the plain-language path needs **no API key**.
+
+---
+
+## A managed memory substrate
+
+Every agent you build now gets the four memory layers managed for you, on top of CodeNow's cross-LLM ledger:
+
+- **Short-term, budgeted** — context is budgeted like RAM (distilled facts first, recent activity next) and assembled cache-friendly, so you ship fast, cheap inference without becoming a KV-cache expert. A `memory.ts` / `memory.py` adapter is scaffolded into every agent, so a built agent can `remember()` what it did and `recall()` a budgeted memory block on its next run.
+- **Long-term, with a consolidation loop** — a background job distills raw episodic activity into **durable semantic insights** ("here's what this project reliably wants") — the engineering analogue of sleep. Runs on CodeNow-served inference; no key required.
+- **Governed by default** — every memory carries **provenance**; anything an agent writes is wrapped so a poisoned "fact" can't smuggle instructions into a later run (**poisoning defense**); and a **forgetting sweep** retires entries past their TTL — still auditable, never silently lost.
+
+It's all visible in the Foundry's **Knowledge & Memory** step: live stats (episodic / semantic / consolidated / forgotten), recent entries, and one-click **Consolidate** and **Sweep**.
+
+---
+
+## Run it now — the default outcome is a working agent
+
+Create an agent and you land **straight on running it**, not on a static card or a file tree. The artifact you show a colleague is a working agent, minute one.
+
+## Zero-setup on-ramp
+
+The plain-language path ("describe it and we'll build it") now runs on **CodeNow-served inference** — **no API key to paste, nothing to install**. The fastest way from an idea to a working agent.
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Memory substrate** | Anyone building an agent | The Foundry's Knowledge & Memory step is now a live memory panel; new agents are scaffolded with a memory adapter. Existing agents are unaffected until rebuilt. |
+| **Run-it-now / zero-BYOK** | New builders | After create you land on the run surface; the describe path needs no key. |
+
+Auto-update from v0.1.56 happens on next launch. No migration steps.
+
+---
+
+## What's next
+
+- **Reconstructive retrieval** — distilled insights already surface first; graph-structured, multi-hop reconstruction is the next step beyond nearest-neighbor.
+- **Shared institutional memory** — a single governed memory a whole Fleet of agents can inherit, with per-agent private vs shared scoping.
+- **One-click live deploy** — publish a built agent to a callable URL.
