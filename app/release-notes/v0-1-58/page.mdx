@@ -1,0 +1,42 @@
+---
+title: v0.1.58 — Meet AgentFoundry · Async Mission Control
+---
+
+# v0.1.58 — CodeNow is now AgentFoundry, and it runs your whole agent team
+
+**Released 2026-06-22.** Multi-platform signed/notarized DMG (Mac Apple Silicon + Intel) + EXE + AppImage. Auto-update from v0.1.57 happens on next launch.
+
+The IDE you've been using is now **AgentFoundry**. Same window, same projects, same logins — the name just caught up to what it's become: an IDE built around **agents**, not the editor. (The macOS menu and installer still read "CodeNow" for now; the full bundle rename ships in a later build so your settings and auto-updates carry over cleanly — nothing for you to migrate.)
+
+---
+
+## Async Mission Control
+
+The headline: a new **Mission Control** tab in Business mode — a board where you **dispatch tasks to agents and supervise them as they run, concurrently and asynchronously**. The columns are live: **Queued → Running → Needs review → Done**. Fire as many missions as you like; each one runs on its own.
+
+- When a step needs a human — anything that writes externally — the mission lands in **Needs review** with **Approve / Deny**. The guardrail, inline.
+- Finished missions show the **real step results** and a **TrustScore**.
+- It's all on the real run engine — no fake progress bars, no theater.
+
+This is our answer to agent-first IDEs like **Google Antigravity** — except every model is **yours (BYOK)** and the harness is **code you own**, not a managed box that locks you to one vendor.
+
+---
+
+## Fixes that matter
+
+- **No more constant "Session expiring soon."** If you run the dev build and the installed app side by side, they were fighting over one refresh token and nagging you forever. Fixed at the root.
+- **Building an agent no longer dead-ends on `session_expired`** — you get a clear **"Sign in again"** instead of a raw error code.
+- **The white theme is readable** — the user menu (dark-on-dark), the **GitHub icon** (invisible), and the **Confirm / Safe / Full** autonomy toggle are all fixed.
+- **Browser navigation hardened** — running a freshly-built page in the embedded browser no longer spuriously fails (`ERR_ABORTED` on a re-attach).
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **AgentFoundry name** | Everyone | In-app branding now reads AgentFoundry. The macOS menu/installer + auto-update identity stay "CodeNow" until a later cutover build — nothing to migrate. |
+| **Mission Control** | Business-mode users | New tab between **Build** and **Catalog**. |
+| **Auth / theme / browser fixes** | Everyone | Just better. No action. |
+
+Auto-update from v0.1.57 happens on next launch. No migration steps.

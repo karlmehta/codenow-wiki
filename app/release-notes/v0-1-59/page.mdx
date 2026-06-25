@@ -1,0 +1,48 @@
+---
+title: v0.1.59 — Mission Control artifacts + in-browser proof-of-work
+---
+
+# v0.1.59 — Your agents show their work
+
+**Released 2026-06-25.** Multi-platform signed/notarized DMG + EXE + AppImage. Auto-update from v0.1.58 happens on next launch.
+
+Mission Control (v0.1.58) let you dispatch and supervise a whole team of agents. v0.1.59 makes every mission **prove what it did**.
+
+---
+
+## Artifacts — typed, verifiable, from the real run
+
+Every finished mission now opens a **Review drawer** of typed artifacts, derived from the **actual run** — never a summary it made up:
+
+- **📋 Plan** — the steps it set out to do
+- **🧭 Walkthrough** — what actually happened, step by step, pass / fail / skipped
+- **📁 Files** — every file it touched
+- **📄 Output** — the final result
+- **⚠️ Error** — if it stopped, exactly why
+
+This is the "show real work" surface — what lets you trust an agent without watching it the whole time.
+
+---
+
+## Verify in browser — proof-of-work, captured
+
+If a mission built something you can open in a browser, hit **▶ Verify in browser**. AgentFoundry drives the embedded browser to **actually run the agent's page** and **captures a screenshot as proof**, attached right to the mission as a verification artifact. The agent doesn't just claim it works — it shows you.
+
+Both are on the real substrate: real run records, real browser tools, real screenshots. No mocks.
+
+---
+
+## Where this leaves us vs Antigravity
+
+With **Mission Control + Artifacts + browser-verify**, AgentFoundry now matches agent-first IDEs like **Google Antigravity** on the surfaces that build trust — **and** gives you what a single-vendor IDE structurally can't: **multi-model BYOK**, an agent harness **you own**, and a **Business mode** for the non-coders who actually oversee the work.
+
+---
+
+## Upgrade notes
+
+| Change | Who notices | What to expect |
+|---|---|---|
+| **Mission artifacts** | Mission Control users | Done / failed missions get a **Review** button → the artifact drawer. |
+| **Verify in browser** | Anyone building web output | A **Verify** button appears when a mission touched an `.html` file. |
+
+Auto-update from v0.1.58 happens on next launch. No migration steps.

@@ -1,4 +1,6 @@
 export default {
+  'v0-1-59': 'v0.1.59 — Mission Control artifacts + in-browser proof-of-work',
+  'v0-1-58': 'v0.1.58 — Meet AgentFoundry · Async Mission Control',
   'v0-1-57': 'v0.1.57 — Agent memory substrate (the memory frontier, made real)',
   'v0-1-56': 'v0.1.56 — Agent Foundry, rebuilt as a guided step-by-step builder',
   'v0-1-55': 'v0.1.55 — One-click light/dark · no more stuck "session expiring" · clickable invite links',
