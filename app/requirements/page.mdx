@@ -77,17 +77,19 @@ No SDK, no runtime — just an Agent21 manifest file. Use this if you're wiring 
 
 ## Agent21 marketplace publishing
 
-Publishing your built agent to Agent21 (one-click monetize) requires an `AGENT21_CLIENT_SECRET`. To get one:
+Publishing your built agent to [Agent21](https://agent21.ai) (one-click monetize) requires an `AGENT21_CLIENT_SECRET`.
 
-1. Sign up at [agent21.dev](https://agent21.dev) (when public; private beta as of v0.1.14)
-2. Go to Account → API access → Create client credentials
-3. Add to `~/.codenow/.env.local`:
-   ```
-   AGENT21_CLIENT_SECRET=...
-   ```
-4. Relaunch CodeNow
+> **Agent21 is in private beta (invite-only).** You can't self-serve credentials yet.
+> Request an invite + client credentials from the CodeNow team; they're issued
+> together. Once you have the secret:
+>
+> 1. Add it to `~/.codenow/.env.local`:
+>    ```
+>    AGENT21_CLIENT_SECRET=...
+>    ```
+> 2. Relaunch CodeNow, then click **Connect Agent21** on the Publish tab and approve the OAuth prompt.
 
-If you're not publishing to a marketplace yet, you can skip this entirely — agent scaffolding, running, testing, and the Live Replay all work without an Agent21 account.
+If you're not publishing to a marketplace yet, **skip this entirely** — agent scaffolding, running, testing, Live Replay, and every other pipeline step work without an Agent21 account. Publish is the only step that needs it.
 
 ## CLI tools (optional but recommended)
 
