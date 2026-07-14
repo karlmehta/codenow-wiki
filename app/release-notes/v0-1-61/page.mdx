@@ -1,0 +1,29 @@
+---
+title: v0.1.61 — Simpler agent-building · first-class Agent21 · keyless studio
+---
+
+# v0.1.61 — Simpler agent-building · first-class Agent21 · keyless studio
+
+**Released 2026-07-14.** Signed + notarized on Mac + Linux; gated on full smoke + E2E. Windows ships **unsigned** this release while our Azure Trusted Signing identity validation finishes — a **signed** `AgentFoundry-Setup.exe` will replace it on this same release shortly (SmartScreen's "unknown publisher" wall goes away then).
+
+## Building an agent is finally intuitive
+
+Users told us the build flow was overwhelming. It's now one primary path — **Describe → Build → Run**:
+
+- The Foundry leads with a single **"What should your agent do?"** box and one **Build** button. Type it, click, land on a **running agent** — no SDK choice, no jargon, no 9-step wall up front.
+- The old 9-step stepper is still there for power users, but **tucked behind "Advanced: build step by step."** The vendor-lock-in essays and harness/orchestrator/MCP jargon now live behind disclosures, with a **"Recommended for you"** kit auto-picked from your keys.
+- The **studio rail is decluttered**: the four overlapping run tabs (Ask/Threads/Test) collapse into a single **Run** with a "More ways to run" disclosure, and the Run/Observe/Ship groups stay hidden until you actually have an agent. "Build" was renamed **Define** so it means one thing.
+
+## First-class Agent21 publishing — no more client secret
+
+Publishing to Agent21 used to require every user to hand-set an `AGENT21_CLIENT_SECRET` env var. **Gone.** The app is now a proper OAuth client: click **Connect Agent21**, approve in your browser, done. The credential lives on our backend, not in your `.env`. One click, no setup.
+
+## Keyless studio — Run & Test with zero keys
+
+The multi-model studio now defaults to **CodeNow-served SMART-Code** — Run, Test, and threads work with **no API key at all** (served inference, metered against your free pool). Bring your own Anthropic/OpenAI/Gemini/Fireworks keys anytime to compare models side-by-side, but you no longer need one just to try your agent.
+
+## Also
+
+- **Editor is free for everyone, forever.** Served SMART-Code is free for 6 months, then any paid plan (or your own key) keeps it going; Business mode is the subscription surface. BYOK is always free.
+- Password reset is **scan-proof** — corporate email security can no longer consume the one-time link before you click it.
+- Dead `agent21.dev` links fixed → `agent21.ai`.

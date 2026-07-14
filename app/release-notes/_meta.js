@@ -1,4 +1,5 @@
 export default {
+  'v0-1-61': 'v0.1.61 — Simpler agent-building · first-class Agent21 · keyless studio',
   'v0-1-59': 'v0.1.59 — Mission Control artifacts + in-browser proof-of-work',
   'v0-1-58': 'v0.1.58 — Meet AgentFoundry · Async Mission Control',
   'v0-1-57': 'v0.1.57 — Agent memory substrate (the memory frontier, made real)',
