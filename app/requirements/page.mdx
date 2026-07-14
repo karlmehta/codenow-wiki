@@ -4,7 +4,7 @@ title: Requirements & prerequisites
 
 # Before you install CodeNow
 
-CodeNow is a **bring-your-own-key** IDE — you sign in once, then connect the AI providers you already pay for. There is no first-party LLM bill from CodeNow itself. This page lists the upstream services CodeNow can integrate with, what each one requires, and which ones cost money.
+CodeNow works **keyless out of the box** — you sign in once and the built-in SMART-Code studio runs on CodeNow-served inference with no API key at all (metered against a free pool). You can also **bring your own keys** to run any provider you already pay for, side-by-side. This page lists the upstream services CodeNow can integrate with, what each one requires, and which ones cost money — but none of them are required just to start building.
 
 ## Operating system
 
@@ -15,7 +15,7 @@ CodeNow is a **bring-your-own-key** IDE — you sign in once, then connect the A
 
 ## AI providers
 
-CodeNow runs side-by-side multi-model: Claude · Codex · Gemini · Aider · Copilot. **You configure which ones you want.** None of them are required — you can use the IDE with zero AI integrations and it still gives you Monaco editor, file tree, terminal, Git GUI, and team collaboration.
+CodeNow runs side-by-side multi-model: Claude · Codex · Gemini · Aider · Copilot. **You configure which ones you want.** None of them are required — the built-in SMART-Code studio defaults to **CodeNow-served inference with no key** (Run, Test, and agent threads work out of the box), and even with zero AI integrations you still get the Monaco editor, file tree, terminal, Git GUI, and team collaboration. Bring your own keys when you want to compare providers side-by-side or run one of the SDK kits below directly on your machine.
 
 ### Claude Code
 
@@ -29,7 +29,7 @@ If you only have a free Claude account, the CLI will sign in but every command w
 
 ### Claude Agent SDK (TypeScript / Python)
 
-The default kit when you click **+ Build new agent**. **Requires an Anthropic API key**, which is separate from your Claude Pro subscription. Get one at [console.anthropic.com](https://console.anthropic.com/) — pricing is pay-as-you-go (no monthly fee). Add to `~/.codenow/.env.local`:
+Often the **"Recommended for you"** kit the Foundry auto-picks (from the keys it detects). Running this kit's scaffolded code locally **requires an Anthropic API key**, which is separate from your Claude Pro subscription. Get one at [console.anthropic.com](https://console.anthropic.com/) — pricing is pay-as-you-go (no monthly fee). Add to `~/.codenow/.env.local`:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
@@ -77,19 +77,16 @@ No SDK, no runtime — just an Agent21 manifest file. Use this if you're wiring 
 
 ## Agent21 marketplace publishing
 
-Publishing your built agent to [Agent21](https://agent21.ai) (one-click monetize) requires an `AGENT21_CLIENT_SECRET`.
+Publishing your built agent to [Agent21](https://agent21.ai) (one-click monetize) is now a one-click OAuth connect — **no client secret, no env var, no setup on your machine.** The client credential lives on CodeNow's backend, not your laptop.
 
-> **Agent21 is in private beta (invite-only).** You can't self-serve credentials yet.
-> Request an invite + client credentials from the CodeNow team; they're issued
-> together. Once you have the secret:
+> **Agent21 is in private beta (invite-only).** You still need an Agent21
+> *account* to authorize the connection — request an invite from the CodeNow
+> team. Once you have one:
 >
-> 1. Add it to `~/.codenow/.env.local`:
->    ```
->    AGENT21_CLIENT_SECRET=...
->    ```
-> 2. Relaunch CodeNow, then click **Connect Agent21** on the Publish tab and approve the OAuth prompt.
+> 1. Open the **Publish** tab in the Agents panel and click **Connect Agent21**.
+> 2. Approve the consent screen in your browser. Done — the Publish tab shows a green "Connected" badge.
 
-If you're not publishing to a marketplace yet, **skip this entirely** — agent scaffolding, running, testing, Live Replay, and every other pipeline step work without an Agent21 account. Publish is the only step that needs it.
+If you're not publishing to a marketplace yet, **skip this entirely** — agent building, running, testing, Live Replay, and every other pipeline step work without an Agent21 account. Publish is the only step that needs it.
 
 ## CLI tools (optional but recommended)
 

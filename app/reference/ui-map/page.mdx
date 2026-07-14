@@ -179,16 +179,20 @@ Editor tabs at the top: file name + close `×`. Drag to reorder. Right-click for
 
 ## 5. Agents panel deep-dive
 
-The core of CodeNow's agent IDE story. Ten sub-tabs in lifecycle order.
+The core of CodeNow's agent IDE story. Ten sub-tabs in lifecycle order, grouped into **Define · Run · Observe · Ship**.
 
 <img src="/screenshots/agents-panel-overview.png" alt="Agents panel overview" style={{ maxWidth: "100%", border: "1px solid #2a2a2a", borderRadius: "8px", margin: "8px 0" }} />
+
+<Callout type="info">
+  **Progressive disclosure (v0.1.61).** The left-rail tab groups declutter until you actually have an agent: the **Run / Observe / Ship** groups stay hidden until the project has its first agent. The group formerly labeled **"Build"** is now **"Define."** And the four overlapping run tabs — Ask / Run / Threads / Test — collapse so **Run** is the single primary, with Ask / Threads / Test tucked under a **"More ways to run"** disclosure.
+</Callout>
 
 ### Sub-tab navigation strip
 
 | Sub-tab | Purpose |
 |---|---|
 | **Anatomy** | Visual agent card — identity, skills rail, conversation, connectors, status, drawers |
-| **Run** | Multi-model studio — fan-out a prompt to Claude/GPT/Gemini in parallel |
+| **Run** | Multi-model studio — the single primary run tab (Ask / Threads / Test live under "More ways to run"). Defaults to CodeNow-served SMART-Code, no key needed |
 | **Test** | Single-agent live test (start process, send messages, see trace) |
 | **Runs** | Recorded runs list (local JSONL + Agent21 prod). Click any → Replay viewer |
 | **Trace** | Studio multi-model run history with cost roll-ups |
@@ -196,7 +200,7 @@ The core of CodeNow's agent IDE story. Ten sub-tabs in lifecycle order.
 | **Tools** | Visual Tool Builder + project tool scan |
 | **Prompts** | Versioned system prompts with `{{variables}}` |
 | **Skills** | Per-project skill library |
-| **Publish** | Agent21 OAuth + pre-flight + 1-click monetize + marketplace browse |
+| **Publish** | Agent21 OAuth (one-click, no client secret) + pre-flight + 1-click monetize + marketplace browse |
 
 ### Anatomy sub-tab
 
@@ -232,12 +236,14 @@ Models the [Anthropic 2026 Agent](/concepts/mental-model) mockup. Auto-promoted 
 
 ### Run sub-tab (multi-model studio)
 
+Defaults to CodeNow-served **SMART-Code** — Run and Test work with **no API key** (served inference, metered against a free pool). Ask / Threads / Test are collapsed under the **"More ways to run"** disclosure. Adding your own keys is optional and only needed for side-by-side model comparison.
+
 | Element | What it does |
 |---|---|
 | **System prompt** textarea | Optional system prompt prepended to every model call |
 | **User prompt** textarea | The prompt fanned out to all selected models |
-| **Model picker** (multi-select) | Toggle Claude Opus / GPT-5 / Gemini / etc. |
-| **Manage keys** link | Opens Connections tab to add API keys |
+| **Model picker** (multi-select) | Toggle SMART-Code (served, keyless) / Claude Opus / GPT-5 / Gemini / etc. |
+| **Manage keys** link | Opens Connections tab to add optional BYOK keys for model comparison |
 | **Run** button | Fans out to every selected model in parallel |
 | **Snapshot as eval** button | Saves the most recent successful run as a new eval case |
 
@@ -337,10 +343,10 @@ Each row is **draggable** — drag onto the Anatomy card to add to `manifest.too
 | Element | What it does |
 |---|---|
 | **Refresh** | Re-load manifests from disk |
-| **+ Build new** | Opens [Scaffold Wizard](#scaffold-wizard-modal) (kit picker → fields → scaffold) |
+| **+ Build new** | Opens the Foundry — Describe → Build by default, or the **Advanced: build step by step** [scaffold wizard](#scaffold-wizard-modal) (kit picker → fields → scaffold) |
 | **+ Import** | Manifest editor for advanced cases |
 | **Browse marketplace** | Opens Agent21 catalog inline with Subscribe + Fork actions |
-| **Connect Agent21** | Browser OAuth flow |
+| **Connect Agent21** | One-click browser OAuth — no client secret / env var (credential lives on CodeNow's backend) |
 | **OAuth status banner** | Shows connection state |
 | **Manifest row** | Shows pre-flight status. Click **Publish ↗** for 6-point checklist + 1-click monetize |
 
@@ -439,9 +445,13 @@ Invite a collaborator (developer or business user) to the project. Files stay in
 | **+ Add param** | Param name + type (string/number/boolean) + description |
 | **Generate** | Writes `tools/<name>.ts` (or `.py`) with `tool()` + `createSdkMcpServer()` exports |
 
-### Scaffold Wizard modal
+### Describe → Build (default entry point)
 
-Opens from **+ Build new** in Publish tab.
+The primary way to create an agent. A single **"What should your agent do?"** box + one **Build** button — type a plain-language description, click, and CodeNow drafts the agent, auto-picks a **"Recommended for you"** kit from your detected keys, scaffolds it, and lands you on a running agent. No kit picker, no jargon up front. The 9-step guided builder (kit choice, sub-agents, deploy targets, harness explainers) sits behind an **"Advanced: build step by step"** disclosure.
+
+### Scaffold Wizard modal (Advanced path)
+
+The opt-in step-by-step builder — reach it via **Advanced: build step by step** or **+ Build new** in the Publish tab.
 
 | Step | What it does |
 |---|---|
@@ -451,7 +461,7 @@ Opens from **+ Build new** in Publish tab.
 
 ### Hello Agent CTA
 
-Lives on the Anatomy card when no manifest exists in the project. Single button **Build your first agent →** auto-fills the wizard with the Claude Agent SDK kit and slug `hello-agent`.
+Lives on the Anatomy card when no manifest exists in the project. The **"What should your agent do?"** box + **Build** button is the default; **Advanced: build step by step** underneath opens the guided kit picker.
 
 ### Settings modal (`Cmd+,`)
 

@@ -111,30 +111,27 @@ Click the model switcher at the top — Claude Code, OpenAI Codex, Gemini, Aider
 
 ## 6. Build your first agent
 
-Now the agent half. CodeNow ships first-class scaffolds for [four agent harnesses](/concepts/harnesses) so you don't have to bring your own SDK.
+Now the agent half. The Foundry leads with one path — **Describe → Build → Run** — so you don't have to pick an SDK or learn any jargon to get started.
 
 <Steps>
 
 ### Open the Agents sidebar
 The **Agents** tab in the sidebar shows the agent lifecycle: Anatomy · Run · Test · Runs · Trace · Evals · Tools · Prompts · Skills · Publish.
 
-### Build a fresh agent
-Click **Anatomy** → **Build your first agent in 60 seconds**. CodeNow scaffolds a runnable starter using **Claude Agent SDK (TypeScript)** by default. You can pick a different kit:
+### Describe → Build → Run
+Type what you want in the **"What should your agent do?"** box and click **Build**. That's it — CodeNow drafts the agent, scaffolds it (auto-picking a **"Recommended for you"** kit from the keys it detects), and lands you on a **running agent**. No SDK choice, no orchestrator/harness/MCP jargon up front.
 
-| Harness | Best for |
-|---|---|
-| **Claude Agent SDK** | Anthropic API, best Claude integration |
-| **Cursor SDK** | Multi-model + Composer 2, sandboxed cloud VMs |
-| **Microsoft Agent Framework** | Azure-native enterprise stacks |
-| **Google ADK** | Vertex AI, Gemini-native |
+<Callout type="info" emoji="🔑">
+  **No API key needed.** The studio defaults to CodeNow-served **SMART-Code** — Run, Test, and threads work out of the box on served inference (metered against a free pool). Bring your own Anthropic / OpenAI / Gemini / Fireworks key any time to compare models side-by-side, but you don't need one to get a working agent.
+</Callout>
 
-### Add your API key
-The scaffold drops a `START_HERE.md`. Open it. It tells you the one env var you need (`ANTHROPIC_API_KEY` for Claude, `CURSOR_API_KEY` for Cursor, `AZURE_OPENAI_API_KEY` + endpoint for Microsoft, `GOOGLE_API_KEY` for Google). Put it in `.env.local` (already gitignored).
+### Want to build step by step?
+Prefer full control? Open the **"Advanced: build step by step"** disclosure to launch the 9-step guided builder — kit choice, sub-agents, deploy targets, and the harness/orchestrator/vendor-lock-in explainers all live there, behind disclosures. It's opt-in; the Describe → Build path is the default.
 
 ### Run it
-Type a message in the **Anatomy** tab's chat box and hit Enter. CodeNow spawns the agent, runs it, captures the run as a recordable timeline. The response appears as a chat turn with cost + duration.
+Type a message in the **Anatomy** tab's chat box and hit Enter. CodeNow runs the agent and captures the run as a recordable timeline. The response appears as a chat turn with cost + duration.
 
-Or run from the terminal: `npm run agent:dev` (TS) / `python agent.py` (Python).
+If you scaffolded an SDK kit and want to run its code directly from the terminal, drop the one env var its `START_HERE.md` names into `.env.local` (already gitignored) and run `npm run agent:dev` (TS) / `python agent.py` (Python).
 
 ### Replay it
 Open the **Runs** tab. Every run is there with cost, latency, status. Click any run to step through the timeline — every tool call, every model response, every token. Click **Fork to current code →** to re-run the same input through your *current* local agent and diff side-by-side.
@@ -154,7 +151,7 @@ In about five minutes you've:
 - Installed a signed, notarized macOS IDE
 - Wired Slack / GitHub / Jira per-project (MCP)
 - Shipped a small Express app via terminal + AI assist
-- Scaffolded an agent with the Claude Agent SDK
+- Built an agent with Describe → Build → Run — no API key needed
 - Run it through the Live Replay viewer
 - Added a custom tool via the Visual Tool Builder
 - Published to Agent21
@@ -164,7 +161,7 @@ In about five minutes you've:
 - **[Concepts → Agents](/concepts/agents)** — what an agent really is, with diagrams
 - **[Connect → Slack/GitHub/Jira](/connect/slack)** — deep-dive on each MCP integration
 - **[Build → First App](/tutorials/first-app)** — guided path with screenshots
-- **[Build → First Agent](/tutorials/first-agent)** — guided path through the harness picker
+- **[Build → First Agent](/tutorials/first-agent)** — Describe → Build → Run, plus the opt-in Advanced builder
 - **[codenow.pro/trust](https://codenow.pro/trust)** — the trust + safety + observability story
 
 <Callout type="info">

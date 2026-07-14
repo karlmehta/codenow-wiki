@@ -4,13 +4,15 @@ title: Build your first agent
 
 # Build your first agent
 
-Scaffold, test, replay, and publish your first AI agent in CodeNow.
+Describe, build, run, test, replay, and publish your first AI agent in CodeNow.
 
 ## The 60-second version
 
-Open the Agents panel → **Anatomy** → **Build your first agent in 60 seconds**.
+Open the Agents panel and you'll see one box: **"What should your agent do?"** Type a plain-language description, click **Build**, and CodeNow drafts the agent, scaffolds it (auto-picking a **"Recommended for you"** kit from the keys it detects), and lands you on a **running agent**. No SDK choice, no jargon.
 
-CodeNow scaffolds a runnable Hello Agent using **Claude Agent SDK (TypeScript)**. You add one env var (`ANTHROPIC_API_KEY` in `.env.local`) and you're running.
+**No API key required.** The studio defaults to CodeNow-served **SMART-Code** — Run, Test, and threads work on served inference (metered against a free pool). Bring your own Anthropic / OpenAI / Gemini / Fireworks key any time to compare models side-by-side, but you don't need one to get a working agent.
+
+> **Want full control?** Open the **"Advanced: build step by step"** disclosure to launch the 9-step guided builder — kit choice, sub-agents, deploy targets, and the harness/orchestrator/vendor-lock-in explainers all live there. It's opt-in; Describe → Build is the default first screen.
 
 ## What gets scaffolded
 
@@ -51,7 +53,7 @@ Each sub-tab in the Agents panel addresses one part of the lifecycle.
 
 ## The four harness scaffolds — what each one writes
 
-Click **+ Build new** in the Publish sub-tab (or the **Build your first agent** CTA on the Anatomy card). The wizard picks a kit and writes a runnable starter into your project. Here's what each kit produces.
+Describe → Build auto-picks a kit for you, but if you take the **Advanced: build step by step** path you can choose the kit yourself. Whichever route, CodeNow writes a runnable starter into your project. Here's what each kit produces.
 
 ### Claude Agent SDK (TypeScript) — the default
 
@@ -348,7 +350,9 @@ Once the agent works locally and passes evals, ship it to the [Agent21 marketpla
 
 ### Connect Agent21 (one-time)
 
-Agents panel → **Publish** sub-tab → **Connect Agent21**. Browser opens to OAuth. Authorize CodeNow. Token stored in `~/.codenow/.env.local` (never committed). The Publish tab now shows a green "Connected as your-team" badge.
+Agents panel → **Publish** sub-tab → **Connect Agent21**. Your browser opens to the Agent21 consent screen — approve it and you're done. **No client secret, no env var, no setup on your machine:** CodeNow is now a proper OAuth client, so the client credential lives on our backend, not your laptop. The Publish tab shows a green "Connected as your-team" badge.
+
+> **Agent21 is in private beta (invite-only).** You still need an Agent21 *account* to authorize the connection — request an invite from the CodeNow team. The old `AGENT21_CLIENT_SECRET` setup is gone; one click is all it takes now.
 
 ### The pre-flight checklist
 
