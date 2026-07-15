@@ -1,4 +1,5 @@
 export default {
+  'v0-1-62': 'v0.1.62 — Windows terminal fixed · Agent21 publish works · newest Gemini',
   'v0-1-61': 'v0.1.61 — Simpler agent-building · first-class Agent21 · keyless studio',
   'v0-1-59': 'v0.1.59 — Mission Control artifacts + in-browser proof-of-work',
   'v0-1-58': 'v0.1.58 — Meet AgentFoundry · Async Mission Control',

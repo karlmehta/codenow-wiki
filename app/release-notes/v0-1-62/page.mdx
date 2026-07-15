@@ -1,0 +1,30 @@
+---
+title: v0.1.62 — Windows terminal fixed · Agent21 publish works · newest Gemini
+---
+
+# v0.1.62 — Windows terminal fixed · Agent21 publish works · newest Gemini
+
+**Released 2026-07-15.** Signed + notarized on Mac + Linux; gated on full smoke + E2E. Windows ships **unsigned** this release while our Azure Trusted Signing identity validation finishes — a **signed** `AgentFoundry-Setup.exe` replaces it on this same release the moment it clears.
+
+## The embedded terminal works on Windows again
+
+The in-app terminal was **blank for every Windows user** — it tried to launch a Unix login shell (`/bin/zsh -l`) that doesn't exist on Windows, so the pty never spawned. It now launches **PowerShell** (via ConPTY) on Windows, with the system `PATH` intact. The same fix covers CLI/served agent runs, so those work on Windows too.
+
+## Agent21 publishing actually completes now
+
+v0.1.61 made **Connect Agent21** one-click, but publishing could still fail behind the scenes. We stood up a **dedicated first-party `agentfoundry` OAuth client**, corrected the authorize route, and — together with a root-cause fix on Agent21's side — verified the full flow **end to end**: authorize → approve → code → token mint. No client id or secret to set; just click **Connect Agent21** and go.
+
+## Newest Gemini models
+
+Google **retired the `gemini-2.5-flash` model id for new API keys** — BYOK Gemini runs were returning `404 "no longer available."` The multi-model studio now targets the current GA models: **Gemini 3.5 Flash** and **Gemini 3.1 Pro**.
+
+## AgentFoundry, everywhere
+
+The **CodeNow → AgentFoundry** rename is now complete across the app — the menu bar, dialogs, and in-app copy all read AgentFoundry. (The macOS bundle + auto-update identity stay stable so nothing migrates or re-installs.)
+
+## Also
+
+- **TrustModel AGP + AgentCert (partner integration).** Wrap an agent you built with TrustModel's oversight layer and mint an **AgentCert** + TrustScore inline — a first-class **Connect TrustModel** flow with the certificate, score gauge, and findings surfaced in-app. Keys are free on a TrustModel Starter account.
+- A session-expired re-auth prompt now recognizes the new branding, so the "sign in again" panel shows correctly instead of a dead error.
+
+*Under the hood: full smoke green (static 0/0) before tag; the four runtime failures are the known sandbox pty false-positives that pass on CI.*
