@@ -1,0 +1,38 @@
+---
+title: v0.1.63 — Simpler agent-building · first-class Memory tab · Agent21 publish fixed
+---
+
+# v0.1.63 — Simpler agent-building · first-class Memory tab · Agent21 publish fixed
+
+**Released 2026-07-19.** Signed + notarized on Mac + Linux; gated on full smoke + E2E. Windows ships **unsigned** this release while Azure Trusted Signing identity validation finishes — a **signed** `AgentFoundry-Setup.exe` replaces it on this same release the moment it clears.
+
+## A cleaner, simpler way to build an agent
+
+The agent-building surface was redesigned into a focused **five-section Build panel** — **Anatomy · Prompts · Memory · Tools · Skills** — so each part of an agent has one clear home, in the order you actually think about it:
+
+- **Anatomy** — who the agent is.
+- **Prompts** — what you tell it.
+- **Memory** — what it remembers (see below).
+- **Tools / Skills** — what it can do and what it knows.
+
+The **Codebase-map** ("Map this codebase") card moved to the bottom of the Build nav where it belongs, and refreshes in place. Less hunting, fewer tabs, the same power underneath.
+
+## Memory is now first-class
+
+Agent memory graduated from a buried setting to its own **Memory tab** in the Build panel — the memory substrate (short-term budget, episodic→semantic consolidation, governed writes) is now front-and-center where you build the agent, not hidden three menus deep. The memory your agent accumulates in AgentFoundry is carried into the published agent.
+
+## Agent21 publishing — two real fixes
+
+Publishing to Agent21 now works end-to-end for everyone:
+
+- **Publish scope.** The app now requests the full `agents:invoke + publish + manage` scope on connect, so your token can actually publish (previously it only got `invoke` and publishing 403'd).
+- **Stale-session fix.** Connecting Agent21 now refreshes your AgentFoundry session first, so an expired login no longer fails the exchange with *"Invalid or expired token."*
+
+If Agent21 publishing failed for you before, **disconnect + reconnect Agent21 once** on this build and it'll carry the right scope.
+
+## Also
+
+- The **CodeNow → AgentFoundry** rebrand is now complete across every remaining string (menus, dialogs, User-Agent, build artifacts) — one name, everywhere.
+- Newest **Gemini** models (3.5 Flash / 3.1 Pro) for BYOK, from v0.1.62.
+
+*Full smoke green before tag (static 0/0); the runtime failures are the known sandbox pty false-positives that pass on CI.*
