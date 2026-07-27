@@ -1,0 +1,36 @@
+---
+title: v0.1.67 — The full IDE is now free for everyone
+---
+
+# v0.1.67 — The full IDE is now free for everyone
+
+**Released 2026-07-27.** Signed + notarized on Mac (Apple Silicon + Intel). Windows (`AgentFoundry-Setup.exe`) and Linux (`AgentFoundry.AppImage`) are published too; Windows remains **unsigned** pending Azure Trusted Signing. Gated on full smoke + both E2E journeys before tag.
+
+## Free forever — no trial, no expiry
+
+The full AgentFoundry IDE is now **free for everyone, with no trial clock and no expiry**. Multi-project, multi-model (BYOK), real terminals, git, the agent Studio, Live Replay — all of it, free.
+
+- The **trial countdown is gone.** The old *"Day N of 30 · Upgrade"* pill is now a calm **"Free"** badge — no ticking clock, no upgrade pressure.
+- **Nobody gets locked out.** The trial-expiry paywall is retired: a signed-in user always lands straight in the editor. If your trial had lapsed on an older build, this release restores full access.
+
+Paid tiers return later for **served SMART-Code** (AgentFoundry-hosted inference — BYOK stays free always) and **Business mode**. Until then, everything is open.
+
+## Signing up is open to everyone
+
+Creating an account no longer needs an invite or coupon code — just email + password. Promo and invitation links still apply their grant automatically when you arrive through them.
+
+## Building an agent picks up where you are
+
+The **Test** tab now **auto-detects your agent's start command** instead of leaving you staring at an empty box. Drop into a project with an `agent.py`, an `agent.sh`, or a `package.json` with an `agent:dev` script and AgentFoundry pre-fills the right command (`python3 agent.py`, `./agent.sh`, `npm run agent:dev`), reconciles the framework picker to match, and shows exactly which file it detected. Click **Start Agent** and it just runs.
+
+## SMART-Code stops asking you to sign in when you already are
+
+A transient token blip used to flash a full *"Sign in to use SMART-Code Cloud"* screen at users who were already signed in. Now a stale token refreshes silently in the background — the sign-in screen only appears when you genuinely aren't signed in.
+
+## Also — since v0.1.63
+
+- **v0.1.66** — browser / local-tool connectors no longer deadlock the Business-mode Run gate; light-theme contrast sweep.
+- **v0.1.65** — fixed an hourly re-sign-in loop; light-theme update-banner visibility.
+- **v0.1.64** — TrustModel AGP client on the real contract; codebase-map layout fix; new app icon.
+
+*Full smoke green before tag (static 0/0; both journeys 24/24 + 37/37). The runtime failures are the known sandbox pty false-positives that pass on CI.*

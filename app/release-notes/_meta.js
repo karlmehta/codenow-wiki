@@ -1,4 +1,5 @@
 export default {
+  'v0-1-67': 'v0.1.67 — The full IDE is now free for everyone (no trial, no expiry)',
   'v0-1-63': 'v0.1.63 — Simpler agent-building · first-class Memory tab · Agent21 publish fixed',
   'v0-1-62': 'v0.1.62 — Windows terminal fixed · Agent21 publish works · newest Gemini',
   'v0-1-61': 'v0.1.61 — Simpler agent-building · first-class Agent21 · keyless studio',
