@@ -1,23 +1,23 @@
 ---
-title: CodeNow Wiki
+title: AgentFoundry Wiki
 ---
 
-# CodeNow Wiki
+# AgentFoundry Wiki
 
-The user guide, get-started flow, and agent concepts for **CodeNow** — the dual-mode IDE for shipping apps and AI agents.
+The user guide, get-started flow, and agent concepts for **AgentFoundry** — the dual-mode IDE for shipping apps and AI agents.
 
 import { Cards, Callout } from 'nextra/components';
 
 <Callout type="info">
-  **v0.1.29 is live — public launch.** New this cycle: visible **7-day trial pill** + **Stripe checkout** in the topbar, **141/141** smoke green, all four pre-existing test fails root-caused + fixed. [Read the release notes →](/release-notes/v0-1-29)
+  **v0.1.68 is live.** The full IDE is now **free for everyone** — no trial, no expiry. Build an agent by **describing it in plain language** and it scaffolds real code and **runs keyless**. [Read the release notes →](/release-notes/v0-1-68)
 
-  **15 things CodeNow does that Cursor, Windsurf, and Codex don't:**
+  **15 things AgentFoundry does that Cursor, Windsurf, and Codex don't:**
 
   1. **Multi-project tabs in one window** — open every codebase you work in side-by-side. Each tab keeps its own AI model, MCP connections, terminal, agent state. The others are all one-project-per-window.
   2. **Dual-mode IDE** — Developer mode for engineers, Business mode for PMs / ops / sales / legal. Same window, same project state.
   3. **Multi-model side-by-side** — Claude, Codex, Gemini, Aider, Copilot in one window, BYOK, switch in one click.
   4. **All four SDK scaffolds** — Claude Agent SDK (TS + Python), Cursor SDK, Microsoft Agent Framework, Google ADK. Build for any provider.
-  5. **CodeNow Sidecar (Mode C, v0.1.28)** — push skills + guardrails into agents deployed in your own AWS / GCP / Azure cloud. Outbound HTTPS only; no inbound firewall holes. See [Deployment modes →](/concepts/deployment-modes).
+  5. **AgentFoundry Sidecar (Mode C, v0.1.28)** — push skills + guardrails into agents deployed in your own AWS / GCP / Azure cloud. Outbound HTTPS only; no inbound firewall holes. See [Deployment modes →](/concepts/deployment-modes).
   6. **Live Agent Replay** — every agent run captured as JSONL, replayable, forkable to current code with diff.
   7. **Skillify + Guardrails** — business users train any agent from a no-code UI, enforced as system prompt on every invocation.
   8. **CRDT pair-programming (v0.1.28)** — real cursors, real-time edits in the same buffer. No screen-share. See [Pair programming →](/concepts/pair-programming).
@@ -38,7 +38,7 @@ import { Cards, Callout } from 'nextra/components';
 
 <Cards>
   <Cards.Card title="SMART Code Assistant" href="/smart-code" arrow>
-    The coding assistant inside CodeNow — two AI brains, real file reads, no black box. Start here if you're new.
+    The coding assistant inside AgentFoundry — two AI brains, real file reads, no black box. Start here if you're new.
   </Cards.Card>
   <Cards.Card title="Get Started in 5 minutes" href="/get-started" arrow>
     Download → install → connect Slack/GitHub/Jira → ship your first app and your first agent.
@@ -57,19 +57,19 @@ import { Cards, Callout } from 'nextra/components';
   </Cards.Card>
 </Cards>
 
-## Why CodeNow
+## Why AgentFoundry
 
-CodeNow is what happens when an IDE is built for the agent era from the ground up — not a code editor with AI bolted on.
+AgentFoundry is what happens when an IDE is built for the agent era from the ground up — not a code editor with AI bolted on.
 
 - **Multi-model, multi-harness** — Claude Agent SDK · Cursor SDK · Microsoft Agent Framework (Azure) · Google ADK (Vertex). Bring any harness; we ship the lifecycle around it.
 - **Live Agent Replay** — every run captured, replayable, forkable. Production traces in the same surface as dev.
-- **Trust + Safety built in** — observability, guardrails, evals, HITL approvals, audit trail. [No SDK install](https://codenow.pro/trust).
+- **Trust + Safety built in** — observability, guardrails, evals, HITL approvals, audit trail. [No SDK install](https://agentfoundry.me/trust).
 - **Dual-mode** — engineers ship the agent, domain experts skill and guardrail it, operators monitor it. All in one IDE.
 - **Publish to Agent21** — one click, OAuth-authenticated, full provenance manifest.
 
 ## Wiki sections
 
-- **[SMART Code Assistant](/smart-code)** — the coding assistant inside CodeNow
+- **[SMART Code Assistant](/smart-code)** — the coding assistant inside AgentFoundry
 - **[Get Started](/get-started)** — install, configure, first app, first agent
 - **[Concepts](/concepts/agents)** — agents, harnesses, runs, replay, manifests
 - **[Build](/tutorials/first-app)** — guided builds for apps and agents
@@ -81,8 +81,8 @@ CodeNow is what happens when an IDE is built for the agent era from the ground u
 
 This wiki adapts and references several open-source bodies of work:
 
-- **[Agentic Design Patterns](https://github.com/evoiz/Agentic-Design-Patterns)** by Evoiz — open-source book on agent patterns. We translate the patterns through the CodeNow vocabulary (Anatomy card, harnesses, manifest model).
+- **[Agentic Design Patterns](https://github.com/evoiz/Agentic-Design-Patterns)** by Evoiz — open-source book on agent patterns. We translate the patterns through the AgentFoundry vocabulary (Anatomy card, harnesses, manifest model).
 - **[Claude Agent SDK docs](https://docs.claude.com/en/api/agent-sdk/overview)** — Anthropic's official docs.
-- **[Anthropic's "2026 Agent" mockup](https://www.anthropic.com/)** — the visual mental model behind CodeNow's Anatomy card.
+- **[Anthropic's "2026 Agent" mockup](https://www.anthropic.com/)** — the visual mental model behind AgentFoundry's Anatomy card.
 
-The wiki is released under the same open license as the [Agentic Design Patterns](https://github.com/evoiz/Agentic-Design-Patterns) source where adapted; CodeNow-specific content is MIT.
+The wiki is released under the same open license as the [Agentic Design Patterns](https://github.com/evoiz/Agentic-Design-Patterns) source where adapted; AgentFoundry-specific content is MIT.
