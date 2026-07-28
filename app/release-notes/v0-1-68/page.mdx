@@ -1,0 +1,18 @@
+---
+title: v0.1.68 — Guided agents actually run (and leave real files behind)
+---
+
+# v0.1.68 — Guided agents actually run (and leave real files behind)
+
+**Released 2026-07-28.** Signed + notarized on Mac (Apple Silicon + Intel); Windows + Linux published, Windows unsigned pending Azure. Gated on full smoke + both E2E journeys.
+
+## Build an agent by describing it — and it just runs
+
+When you build an agent the easy way — **describe it in plain language** and hit *Build my agent* — two things are now true that weren't before:
+
+- **You get real files.** The guided builder used to write only a hidden manifest, so your project folder looked empty (`ls` showed nothing) and there was nothing to inspect, fork, or hand to an engineer. It now **scaffolds a real `agent.py`** alongside the plan, so the agent is actual code you can open, edit, and graduate.
+- **It runs with no API key.** Testing a described agent used to fail with *"No agent.ts or agent.py found at project root"* — because a described agent is a **plan**, not a key-carrying code process, and the card tried to run it the wrong way. Now the card's **Send routes it through the keyless AgentFoundry engine** (the same one Business-mode Build uses), so it runs on our served inference with **no key to paste**, and the result shows up right in the card.
+
+Bring-your-own-key agents (the "build from a kit" path) still run your `agent.py` directly, exactly as before.
+
+*Full smoke green before tag (static 0/0; runtime 258 pass; both journeys 24/24 + 37/37). The runtime failures are the known sandbox pty false-positives that pass on CI.*
