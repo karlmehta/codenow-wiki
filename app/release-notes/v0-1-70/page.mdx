@@ -1,0 +1,27 @@
+---
+title: v0.1.70 — Agents you build actually run, and actually deploy
+---
+
+# v0.1.70 — Agents you build actually run, and actually deploy
+
+**Released 2026-08-01.** Signed + notarized on Mac (Apple Silicon + Intel); Windows + Linux published, Windows unsigned pending Azure. Gated on full smoke + all three E2E journeys.
+
+This release closes three places where the agent lifecycle quietly dead-ended when people actually used it.
+
+## "Start agent" now runs anything your terminal can
+
+If an agent ran fine in the AgentFoundry terminal (or Cursor) but died the moment you pressed **Start agent**, this was why: the Start-agent runner launched a bare non-login shell, so it never loaded your shell profile — your `PATH` additions (bun, pyenv/python, Homebrew) and your exported keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …) simply weren't there, and the agent failed on the first real call.
+
+The runner now launches the **same interactive login shell** the embedded terminal uses (same profile, same `PATH`, same environment). The rule is now simple: **if it runs in the terminal, it runs under Start agent.**
+
+## Graduate is real — a built agent can now be deployed
+
+Building an agent in **Business mode → Build** and saving it left you stranded: the assistant lived in your personal library, but **Deploy** looks for a project's Studio manifest, and **Graduate** — the bridge between the two — was still a "coming later" placeholder. So there was no path from *"I described an agent"* to *"it's deployed and governed."*
+
+**Graduate now works.** Click it (from the plan view or next to any saved assistant) and AgentFoundry promotes the agent into your open project as a first-class Studio agent. From there the full path is live: **open it in Developer mode → Agents → wrap it in TrustModel AGP governance → deploy** — and get a real TrustScore back. Requires an open project (Graduate hands the agent into a codebase).
+
+## TrustModel "Publish a policy" goes to the right place
+
+After connecting an agent to TrustModel, the **Publish a policy** button 404'd on a stale governance URL. It now deep-links straight to that agent's **Control Plane**, where its AGP policy lives.
+
+*Verified end-to-end by a new full-lifecycle test — build a social-media posting agent → Graduate → wrap AGP → deploy → govern — that runs on the real engine against a mock TrustModel gateway (the client HMAC-signs every call for real). Full smoke green before tag (static 0/0; runtime 258 pass; journeys 24/24 + 37/37 + 12/12). The runtime failures are the known sandbox pty false-positives that pass on CI.*
