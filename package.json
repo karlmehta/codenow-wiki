@@ -1,7 +1,7 @@
 {
   "name": "codenow-wiki",
   "version": "0.1.0",
-  "description": "User guide, get-started, and agent concepts for CodeNow IDE — published at wiki.codenow.pro",
+  "description": "User guide, get-started, and agent concepts for CodeNow IDE — published at wiki.agentfoundry.me",
   "private": true,
   "scripts": {
     "dev": "next dev",

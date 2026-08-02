@@ -8,7 +8,19 @@ const withNextra = nextra({
 });
 
 export default withNextra({
-  // Wiki is hosted at wiki.codenow.pro (separate Vercel project).
-  // No basePath needed since the wiki owns its subdomain root.
+  // Canonical wiki home is wiki.agentfoundry.me (separate Vercel project).
+  // The legacy wiki.codenow.pro host still points at this project; 308 it to
+  // the AgentFoundry domain so old/external links keep working. Host-scoped so
+  // wiki.agentfoundry.me never redirects to itself (no loop).
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'wiki.codenow.pro' }],
+        destination: 'https://wiki.agentfoundry.me/:path*',
+        permanent: true,
+      },
+    ];
+  },
 });
