@@ -9,6 +9,7 @@ export default {
   requirements: 'Requirements',
   concepts: 'Concepts',
   tutorials: 'Build',
+  'mobile-qa-automation': 'Mobile QA',
   connect: 'Connect',
   reference: 'Reference',
   troubleshooting: 'Troubleshooting',

@@ -1,0 +1,173 @@
+---
+title: Mobile QA Automation (iOS & Android)
+---
+
+# Mobile QA Automation (iOS & Android)
+
+AgentFoundry ships a **built-in, AI-powered mobile test-automation suite**. Open a
+mobile repo and it can test itself — and heal itself — from inside the IDE: build,
+record, run, and let an agent **write and fix** device UI tests for iOS and
+Android. It runs on the **simulator/emulator you already have** — no device farm,
+no per-parallel bill. This page is exactly what you get, how it works, and what
+you need on your laptop.
+
+Shipped in [v0.1.75](/release-notes). Marketing overview: [agentfoundry.me/mobile-qa-automation](https://agentfoundry.me/mobile-qa-automation).
+
+## What you get
+
+- **Device in your editor** — the iOS Simulator / Android emulator streams inside AgentFoundry, next to your flows. Build & launch any branch or tag.
+- **Test Explorer** — every flow in a tree with ✓/✗ badges, last-run time, **Run All**, and a failing-only filter.
+- **Author in plain English** — describe a test; the agent reads the live screen, writes the flow, runs it, shows you green.
+- **Record on device** — tap the live mirror; actions become steps, snapped to accessibility labels so flows survive layout changes.
+- **Failure Inspector** — the failing step + the screenshot at failure vs the last-known-good + the accessibility tree, with one-click **Ask agent to fix**.
+- **Self-heal on drift** — when a selector breaks, the agent repairs it against the live a11y tree as a reviewable diff.
+- **Generate tests from a PR** — the agent reads the changed screens and proposes flows that exercise them.
+- **Run triage** — after a suite run, failures cluster into *real regression* / *flaky* / *selector drift* with a likely cause.
+- **One-click CI** — export a GitHub Actions workflow that runs the same flows on every PR.
+
+Your test flows are portable JSON that live in **your** repo under `.yukti/flows/`.
+The AI runs on AgentFoundry's SMART-Code (metered in credits) or **your own key
+(BYOK, free)** — never locked to one model.
+
+## How it works — the stack
+
+We drive the **real first-party simulators you already have**. We do **not** use
+mobile-mcp, Maestro, Appium, or a third-party device runtime.
+
+```
+AgentFoundry (IDE) → YUKTI engine (MIT) → simctl · idb  /  adb · gradle → Simulator / Emulator
+```
+
+| | iOS | Android |
+|---|---|---|
+| **IDE / toolchain** | **Xcode** | **Android Studio** |
+| **Simulator** | iOS Simulator (`xcrun simctl`) | Android Emulator — an **AVD** (e.g. `Pixel_7_API_34`) |
+| **UI driver** | **idb** (`idb ui tap` / `text` / `describe-all`) | **`adb`** + `uiautomator` |
+| **Build** | Xcode / CocoaPods | **Gradle** (`./gradlew`) |
+| **SDK bits** | Full Xcode + a Simulator runtime | Android SDK: `platform-tools` (adb), `emulator`, `build-tools` |
+
+On top sits **YUKTI** — an open-source ([MIT](https://github.com/karlmehta/yukti)),
+dependency-light engine (a bash CLI + a stdlib-Python Studio server) that
+AgentFoundry embeds. It *shells out* to `simctl`/`idb`/`adb`; it never
+reimplements device control. Tests are deterministic, label-based JSON **flows**.
+
+## What you need on your laptop
+
+The in-app **Doctor** (QA panel → Doctor) checks all of this and prints the exact
+fix command for anything missing. The full list up front:
+
+### Platform support by laptop
+
+| Your laptop | Test iOS apps | Test Android apps |
+|---|---|---|
+| **macOS** (Apple Silicon / Intel) | ✅ Xcode Simulator | ✅ Android emulator |
+| **Windows** | ❌ Not possible — Apple requires a Mac for iOS builds/simulators | ◐ Android SDK + emulator via WSL (validation ongoing) |
+| **Linux** | ❌ Not possible (Apple restriction) | ◐ Android emulator (validation ongoing) |
+
+> **Honest note:** iOS testing requires a Mac — that's Apple's rule, not ours.
+> macOS is the fully-validated path today (iOS + Android). Windows/Linux Android
+> support runs through the same engine and is being validated; if you're
+> Windows-only and need iOS, you need access to a Mac (or a Mac CI runner).
+
+### Shared — every platform
+
+- **AgentFoundry** desktop app, v0.1.75+ (Mac / Windows / Linux). Auto-updates.
+- **Node.js 22** (`node@22`) — React Native / Metro pin to 22; newer Node breaks builds.
+- **Git** (+ the **GitHub CLI** `gh` for "generate tests from a PR").
+- **Python 3.8+** — the system `python3` is fine (the Studio server is stdlib-only; no pip installs).
+- **AI access** — sign in to AgentFoundry (SMART-Code credits) *or* bring your own key (Claude / OpenAI / Gemini); BYOK is free.
+- **A QA test account** — a dedicated test login for your app (never a personal/real account, especially against prod).
+
+### For iOS (macOS only)
+
+- **Full Xcode** (not just Command Line Tools) + an iOS Simulator runtime
+- **idb** — `idb-companion` (Homebrew) + `fb-idb` (pip)
+- **CocoaPods** (React Native iOS builds)
+- **Watchman** (React Native)
+
+### For Android (macOS / Linux · Windows via WSL)
+
+- **Android Studio** (or the Android SDK command-line tools)
+- SDK packages: **platform-tools** (`adb`), **emulator**, **build-tools**
+- A configured **AVD** (e.g. `Pixel_7_API_34`)
+- **JDK 17** (Gradle) · `ANDROID_HOME` set
+
+### One-time setup (macOS)
+
+```bash
+# iOS toolchain
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+xcodebuild -downloadPlatform iOS            # iOS simulator runtime
+brew install node@22 cocoapods watchman
+brew trust facebook/fb && brew install idb-companion
+/usr/bin/python3 -m pip install --user fb-idb
+
+# Android toolchain (Android Studio → SDK Manager for the packages)
+brew install node@22
+# install: platform-tools, emulator, build-tools; create an AVD (Pixel 7 API 34)
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+
+# Then: open your mobile repo in AgentFoundry → QA tab → Doctor → fix what's flagged.
+```
+
+## Getting started (60 seconds)
+
+1. Open a mobile repo (React Native · Expo · Flutter · native iOS/Android). The **QA** tab appears in the sidebar; AgentFoundry detects the framework.
+2. Click **Enable QA automation** — it scaffolds `.yukti/` (a build config + a flows folder). Hit **Doctor** to check host tools.
+3. **Start QA server**, then **✨ Generate a starter suite** from your app's screens — or author your first test in plain English.
+4. **Run All** → green. No terminal touched.
+
+## FAQ
+
+### What exactly is the "simulator"? Are you using mobile-mcp, Maestro, or Claude Code's simulator pane?
+
+None of those. iOS runs on Apple's **Xcode Simulator** (via `simctl` + **idb**);
+Android runs on the **Android emulator** (via `adb` / Gradle). Our open-source
+engine **YUKTI** orchestrates them and exposes them to the agent. We deliberately
+don't do blind "agent-drives-the-device over MCP" — the agent authors a
+reviewable, deterministic **flow**, then the engine executes it. The device
+mirror you see is a `simctl`/emulator screenshot streamed into the IDE.
+
+### Why can't I just use the Xcode Simulator directly?
+
+You *are* — we run **on** it. The raw simulator only lets you tap by hand: no
+repeatable tests, assertions, history, recording, CI, or agent. AgentFoundry adds
+that layer on the same simulator — plus the sim gotchas raw `simctl` won't handle
+(ad-hoc signing so Firebase/keychain works, arm64-sim slices, reliable
+char-by-char typing).
+
+### What's the Android equivalent of Xcode?
+
+**Android Studio + the Android SDK.** Xcode gives you the iOS Simulator +
+`simctl`; Android Studio gives you the Android Emulator (AVDs) + the SDK tools:
+`adb` (platform-tools), the `emulator`, `build-tools`, and Gradle. YUKTI drives
+the emulator through `adb`, exactly as it drives the iOS Simulator through
+`simctl`/idb.
+
+### Why is this better than BrowserStack if I don't need all their device types?
+
+That's the case where we win most — the real-device farm is what BrowserStack's
+price buys, so you'd be renting infrastructure you don't use. You get the same
+deterministic automation **plus** an in-editor agent loop, on the sim already on
+your machine, with no per-parallel or per-seat bill and no upload round-trip.
+**Honest caveat:** if you *do* need real devices — OEM Android quirks, old OS
+versions, real GPS/camera/biometrics — a local simulator won't cover that. That's
+BrowserStack's genuine strength; keep a small plan for it, or wait for our hosted
+cloud runners (roadmap).
+
+### How does it save the ~$13k/year BrowserStack charges?
+
+BrowserStack automation is priced per parallel session (~$129+/mo each) plus
+per-seat and add-ons — a ~$13.9k/yr median contract. With AgentFoundry the QA
+infrastructure cost goes to ~$0: the runner + device is your **local
+simulator/emulator** (you already own the Mac + Xcode), CI runs on **GitHub's
+macOS runners** (not BrowserStack minutes), and the engine is free/MIT. You pay
+only for the AI — metered in credits, or **$0 with your own API key**. Even a paid
+seat is ~$210–$410/yr vs $13k. (Same caveat: if real devices are a hard
+requirement, some of that spend legitimately stays.)
+
+### Do my test suites live in AgentFoundry's cloud?
+
+No. Flows are plain JSON in **your** repo under `.yukti/flows/`. The engine is MIT
+open source. Nothing about your tests is locked into our platform — switch tools
+any day.
