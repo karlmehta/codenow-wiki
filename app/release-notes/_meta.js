@@ -1,4 +1,5 @@
 export default {
+  'v0-1-77': 'v0.1.77 — Claude Code goes GUI · remote control from your phone · mobile QA fixes',
   'v0-1-68': 'v0.1.68 — Guided agents actually run (and leave real files behind)',
   'v0-1-67': 'v0.1.67 — The full IDE is now free for everyone (no trial, no expiry)',
   'v0-1-63': 'v0.1.63 — Simpler agent-building · first-class Memory tab · Agent21 publish fixed',

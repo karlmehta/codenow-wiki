@@ -1,0 +1,53 @@
+---
+title: AF Mobile IDE — remote control from your phone
+---
+
+# AF Mobile IDE — drive your desktop coding session from your phone
+
+Your coding session follows you. Start an agent run on your desktop, walk away, and **watch it — and approve its file edits — from your phone.** You can drive **both** coding engines remotely: the built-in **SMART-Code** loop and the real **Claude Code** CLI.
+
+There's nothing to install: it's a PWA at **[agentfoundry.me/app](https://agentfoundry.me/app)**. Add it to your home screen for an app-like launch.
+
+## How it works
+
+A signed-in AgentFoundry desktop with a project open registers a **live relay session**. Your phone pairs to that session and can:
+
+- **Send prompts** into the desktop's SMART-Code or Claude Code loop.
+- **Watch the model stream** and the diffs live.
+- **Approve or deny writes** — whichever of you (phone or desktop) reaches the decision first wins. A 3-minute no-answer times out as a deny, so a run never hangs.
+
+Writes and shell commands always require approval; reads run unattended. The agent executes on your desktop — your code never leaves your machine.
+
+**New in v0.1.77: no project linking required.** Previously remote control only worked on a project linked to your account. Now your own desktop shows up on your phone with **zero linking** — just sign in with the same account on both.
+
+## Get it running
+
+1. On the **desktop**, open any project and make sure you're **signed in** (top-right).
+2. Click the **📱 Remote** button in the top bar.
+3. A panel shows a **QR code**, a **6-character pairing code**, and a link to **agentfoundry.me/app**.
+4. On your **phone**, open **agentfoundry.me/app** (or scan the QR), and **sign in with the same AgentFoundry account**.
+5. It jumps straight to that session. Type a prompt, watch it run, approve edits from your pocket.
+
+## Running a SMART-Code session from your phone
+
+1. Open the session on your phone (steps above).
+2. Make sure the engine toggle is set to **SMART-Code** (the default).
+3. Type a prompt — e.g. *"add input validation to the signup form and run the tests."*
+4. Watch the response stream, with tool calls and diffs. When SMART-Code wants to write a file, an **Approve / Deny** card appears — tap it, or approve on the desktop.
+
+## Running a Claude Code session from your phone
+
+1. In the session, flip the engine toggle to **Claude Code**.
+2. Send a prompt. The desktop runs the real **Claude Code CLI** headlessly and streams its turns back to your phone, with full prompt history.
+3. Reads run unattended; when Claude wants to **edit a file or run a command**, the same **Approve / Deny** card appears on your phone.
+
+## Requirements
+
+- The **desktop** must be running with the project open (the agent executes there — there is no headless-desktop mode).
+- **Sign in with the same AgentFoundry account** on the desktop and the phone.
+- Both need network access (the relay runs through AgentFoundry's cloud; it's NAT-friendly — no port-forwarding).
+
+## Related
+
+- **[Mobile QA automation](/mobile-qa-automation)** — the separate built-in iOS/Android test suite.
+- **[SMART Code Assistant](/smart-code)** — the bundled multi-model coding agent you can now drive remotely.

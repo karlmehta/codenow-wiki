@@ -13,6 +13,13 @@ you need on your laptop.
 
 Shipped in [v0.1.75](/release-notes). Marketing overview: [agentfoundry.me/mobile-qa-automation](https://agentfoundry.me/mobile-qa-automation).
 
+> **Updated in [v0.1.77](/release-notes/v0-1-77):** Android correctness fixes —
+> the flow runner now executes **every** step (a failing step fails the flow),
+> element lookup honors `resource-id` and prefers the real field over a nearby
+> caption, passwords with special characters type correctly, and an Android
+> project runs the **Android** toolchain (adb/uiautomator/Gradle) instead of the
+> iOS path. The element-lookup fix also landed on iOS.
+
 ## What you get
 
 - **Device in your editor** — the iOS Simulator / Android emulator streams inside AgentFoundry, next to your flows. Build & launch any branch or tag.

@@ -1,0 +1,51 @@
+---
+title: v0.1.77 — Claude Code goes GUI · your session goes mobile · QA fixes
+---
+
+# v0.1.77 — Claude Code goes GUI, your session goes mobile, and mobile QA gets real
+
+**Released 2026-09-12.** Signed + notarized on macOS (Apple Silicon + Intel); Windows + Linux published. Gated on full smoke + both E2E journeys.
+
+A substantial release. Three things land together: the **Claude Code** agent moves out of the terminal into a rich point-and-click chat; you can **drive your desktop coding session from your phone**; and the built-in **mobile QA automation** (iOS + Android) gets a batch of real correctness fixes after field testing on Android.
+
+## Claude Code is a GUI chat now (not a terminal)
+
+The Claude Code tab used to be a raw terminal — you couldn't attach a file or click to approve an edit. It's now a first-class chat, the same surface SMART-Code already had:
+
+- **A real chat** — input box, scrollable transcript, streamed responses, tool calls rendered inline.
+- **Attach files and paste screenshots** — drop a file onto the pane or paste a screenshot (⌘V). The agent reads them with its own tools.
+- **Click to approve** — when Claude wants to **edit a file or run a command**, an **Approve / Deny** card appears with the diff. Reads run unattended; writes and shell commands always ask first.
+- **Multi-turn, per project** — each project keeps its own Claude Code conversation; **New chat** starts fresh.
+- **Nothing removed** — a **⇄ Terminal** toggle flips back to the raw `claude` CLI instantly, and the dedicated Terminal tab is still a full terminal.
+
+Under the hood it drives the real `claude` CLI headlessly and maps its live stream into the GUI — same Claude Code you trust, with a human interface. Codex and Gemini get the same treatment next.
+
+> Dropping the terminal doesn't cost you any access to your machine — the agent runs as a local process with full filesystem and command access either way. You only trade the CLI's own TTY prompts for GUI buttons (with the ⇄ Terminal escape hatch right there).
+
+## Remote control — drive your desktop from your phone
+
+Your coding session now follows you. A signed-in desktop with a project open registers a live relay session; your phone pairs to it and can send prompts, watch the model stream and diffs live, and **approve writes remotely**.
+
+**New:** **no project linking required** — your own desktop shows up on your phone with zero linking. Just sign in on both. See **[AF Mobile IDE](/af-mobile-ide)** for the step-by-step.
+
+You can now drive **both** engines from the phone — SMART-Code **and** the real Claude Code CLI (headless, with write-approval gated the same way).
+
+## Mobile QA automation — Android + iOS fixes
+
+v0.1.75 shipped the built-in mobile QA suite (YUKTI). Field testing on Android surfaced four bugs where a flow could silently do the wrong thing — or nothing — and still report PASS. All are fixed, and we audited the iOS path for the same classes of bug.
+
+| Bug (Android) | Fix |
+|---|---|
+| **Only the first step ran, yet PASS.** The step loop piped through `while read`, so a step's `adb shell` consumed the same stream and swallowed the rest. | Steps now feed a separate file descriptor (`read <&3`). All steps run, and a failing step **fails the flow (exit 1)**. |
+| **Wrong element tapped.** Lookup took the first visible-text substring and ignored `resource-id` — "Email" hit the "or use email" caption, "Password" hit "Forgot Password?". | Lookup now ranks candidates: `resource-id` + exact label + editable/clickable controls beat a static caption. |
+| **Passwords with special characters failed.** `type` passed the string to the device shell unquoted, so a `*` was glob-expanded (8-char password → 11 chars). | The typed text is quoted for the on-device shell; spaces still map to `%s`. |
+| **Android ran the iOS path.** Platform defaulted to iOS and nothing set it. | Platform is resolved from the project config (auto-detected on scaffold) — Android runs adb/uiautomator/Gradle, iOS runs the Simulator. |
+
+**iOS audit:** only the element-lookup bug reproduced on iOS — now fixed with the same identifier-aware, field-preferring ranking (honoring `AXUniqueId` and element type). The step-loop fix is shared; the quoting bug never applied to iOS (it types character-by-character with no device shell).
+
+## Upgrade
+
+- **Desktop:** update to **v0.1.77** (auto-updates on relaunch). macOS arm64 + x64, Windows, Linux AppImage.
+- **Mobile:** nothing to install — open **agentfoundry.me/app** and sign in. Add it to your home screen.
+
+*Known issue: the Linux AppImage may not launch on very old distributions (e.g. Ubuntu 20.04) due to a glibc mismatch in a native module; a broader-compatibility Linux build is in progress. macOS and Windows are unaffected.*
