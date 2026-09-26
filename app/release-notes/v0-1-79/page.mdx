@@ -1,0 +1,51 @@
+---
+title: v0.1.79 — The full TrustModel lifecycle, on the agent rail
+---
+
+# v0.1.79 — Build → Eval → Run → AgentCert → Deploy → Publish, with a real TrustScore at every beat
+
+**Released 2026-09-26.** Signed + notarized on macOS (Apple Silicon + Intel); Windows + Linux published. Gated on full smoke + E2E journeys.
+
+This release makes the whole **TrustModel** story demo-able end to end — from a brand-new agent to a public certificate — and puts it where you can actually see it: on the agent's lifecycle rail.
+
+## The full lifecycle is on the left rail now
+
+The Agents panel used to hide everything but **Build** until an agent existed — so you couldn't find Run, Eval, or AgentCert when you needed them. The rail now shows the **whole lifecycle, in order**:
+
+**Build → Eval → Run → AgentCert → Deploy → Publish**
+
+Every stage is visible right after Build (dimmed until your first agent exists, never hidden), so the path from "I just built an agent" to "it has a public certificate" reads as one legible spine.
+
+## A real TrustScore — from one API key
+
+Paste a **TrustModel Starter API key** once (**AgentCert → Add API key**, which opens the console for you), and AgentFoundry calls the live TrustModel `/sdk/v1` API directly:
+
+- **Eval** runs a scored evaluation → a real **TrustScore (0–100)** across **11 governance dimensions** (safety, security, reliability, accuracy, transparency, accountability, privacy, fairness, robustness, compliance, human oversight).
+- **AgentCert** mints a **public certificate** with a `verify.trustmodel.ai` verification URL — the shareable proof your agent was evaluated.
+
+No Edge sidecar, no policy to publish, no HMAC setup — just a key. And **no mocks**: a TrustScore or certificate is only ever shown from a real TrustModel response. If scoring can't complete, you get an honest error, never a fabricated number.
+
+## The score shows up where you work
+
+- **Eval** — a TrustScore strip with one-tap **Run TrustModel Eval**.
+- **Run** — after you fire a prompt, **Score this run** scores the *exact output the agent just produced*.
+- **AgentCert** — the full gauge, all 11 dimension bars, and the public certificate card with its verify link.
+
+All three read the same stored result, so the number is consistent across the rail — and it carries into Business mode.
+
+## A non-coder can raise the score
+
+This is the part that makes it real for the people who oversee agents but don't write code. In **Business mode**, a PM or ops owner sees the same TrustScore on the **Fleet** badge and in the **Guardrails** panel. Because skills and guardrails are injected as the agent's system prompt, they **reshape what the agent actually says** — so:
+
+1. Open **Skillify**, run the agent on a scenario, hit **Score with TrustModel**.
+2. Add a skill or tighten a guardrail (data scopes, allowed actions, human-approval).
+3. Score the new response — and watch a **before → after delta** as the number climbs.
+
+It's a genuine loop: the score moves because the agent's real output got better, not because a slider did.
+
+## Upgrade
+
+- **Desktop:** update to **v0.1.79** (auto-updates on relaunch). macOS arm64 + x64, Windows, Linux AppImage.
+- **Bring a TrustModel Starter key:** create a free one at [app.trustmodel.ai](https://app.trustmodel.ai) → Settings → API Keys. Everything else — the rail, the strips, the Business-mode loop — is already in the build.
+
+*Known issue: the Linux AppImage may not launch on very old distributions (e.g. Ubuntu 20.04) due to a glibc mismatch in a native module; a broader-compatibility Linux build is in progress. macOS and Windows are unaffected.*

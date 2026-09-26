@@ -1,4 +1,5 @@
 export default {
+  'v0-1-79': 'v0.1.79 — The full TrustModel lifecycle on the agent rail · real TrustScore + public AgentCert',
   'v0-1-77': 'v0.1.77 — Claude Code goes GUI · remote control from your phone · mobile QA fixes',
   'v0-1-68': 'v0.1.68 — Guided agents actually run (and leave real files behind)',
   'v0-1-67': 'v0.1.67 — The full IDE is now free for everyone (no trial, no expiry)',
